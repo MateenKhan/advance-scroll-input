@@ -1,0 +1,84 @@
+{
+  "name": "@jugaaadi/advance-scroll-input",
+  "version": "0.0.1",
+  "description": "A touch-friendly number input with a vertical roller scrubber and unit-aware parsing (10ft, 100in, 123mm, 123\", 5' 6\").",
+  "keywords": [
+    "react",
+    "input",
+    "number-input",
+    "scrubber",
+    "drag",
+    "roller",
+    "units",
+    "dimension",
+    "cad",
+    "touch"
+  ],
+  "license": "MIT",
+  "author": "jugaaadi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MateenKhan/advance-scroll-input.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MateenKhan/advance-scroll-input/issues"
+  },
+  "homepage": "https://github.com/MateenKhan/advance-scroll-input#readme",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./tailwind": {
+      "types": "./dist/tailwind.d.ts",
+      "import": "./dist/tailwind.js",
+      "require": "./dist/tailwind.cjs"
+    },
+    "./styles.css": "./dist/scroll-component.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "FORMULAS.md",
+    "EVENTS.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "vite",
+    "preview": "vite preview",
+    "test": "npm run build && node test/engine.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=17",
+    "react-dom": ">=17"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,504 @@
+/**
+ * scroll-component — self-contained, fully themeable styles.
+ *
+ * Import once in your app:
+ *   import '@jugaaadi/scroll-component/styles.css';
+ *
+ * EVERY colour, size, weight, opacity, cursor, and timing below is a custom
+ * property. You should never need to override a selector — set the tokens on
+ * `:root`, on a wrapper, or per instance:
+ *
+ *   .my-panel      { --sc-accent: #a78bfa; --sc-bg: #0b1020; }
+ *   <DimensionInput style={{ '--sc-height': '2.5rem' }} />
+ *
+ * Tokens marked (SVG) are consumed by the roller icon, not by this file.
+ */
+
+.sc-root {
+  /* ============================ LAYOUT ============================ */
+  --sc-height: 2rem;
+  --sc-radius: 4px;
+  --sc-gap: 0.375rem;
+  --sc-padding-x: 0.5rem;
+  --sc-roller-width: 1.75rem;
+  --sc-width: 100%;
+
+  /* ============================= TYPE ============================= */
+  --sc-font-size: 0.875rem;
+  --sc-font-family: inherit;
+  --sc-font-weight: 400;
+  --sc-font-weight-dragging: 700;
+  --sc-letter-spacing: normal;
+  --sc-letter-spacing-dragging: 0.025em;
+  --sc-text-align: left;
+
+  /* ============================ SURFACE =========================== */
+  --sc-bg: #020617;
+  --sc-bg-hover: var(--sc-bg);
+  --sc-bg-focus: var(--sc-bg);
+  --sc-bg-dragging: var(--sc-bg);
+  --sc-bg-disabled: var(--sc-bg);
+
+  /* ============================ BORDER ============================ */
+  --sc-border-width: 1px;
+  --sc-border-style: solid;
+  --sc-border: #334155;
+  --sc-border-hover: #475569;
+  --sc-border-focus: var(--sc-accent);
+  --sc-border-dragging: var(--sc-accent);
+  --sc-border-disabled: var(--sc-border);
+
+  /* ============================= TEXT ============================= */
+  --sc-text: #e2e8f0;
+  --sc-text-hover: var(--sc-text);
+  --sc-text-focus: var(--sc-text);
+  --sc-text-dragging: #ffffff;
+  --sc-text-disabled: var(--sc-text);
+  --sc-placeholder: #64748b;
+  --sc-selection-bg: #0e7490;
+  --sc-selection-text: #ffffff;
+  --sc-caret: var(--sc-accent);
+
+  /* ============================ ACCENT ============================ */
+  --sc-accent: #06b6d4;
+  --sc-focus-ring-width: 2px;
+  --sc-focus-ring-color: color-mix(in srgb, var(--sc-accent) 40%, transparent);
+  --sc-shadow: none;
+  --sc-shadow-dragging: inset 0 2px 4px 0 rgb(0 0 0 / 0.35);
+
+  /* ============================ ROLLER ============================ */
+  --sc-roller-idle: #0ea5e9; /* (SVG) rim + arrows at rest */
+  --sc-roller-active: #22d3ee; /* (SVG) rim while dragging */
+  --sc-roller-face: #f8fafc; /* (SVG) inner face */
+  --sc-roller-face-active: #ffffff; /* (SVG) inner face while dragging */
+  --sc-roller-grad-from: #22d3ee; /* (SVG) rim gradient start, at rest */
+  --sc-roller-grad-to: #3b82f6; /* (SVG) rim gradient end, at rest */
+  --sc-roller-border-width: 2; /* (SVG) rim thickness, unitless */
+  --sc-roller-glow: #22d3ee; /* (SVG) glow, at rest */
+  --sc-roller-glow-opacity: 0.4; /* (SVG) */
+
+  /* Rim + glow while travelling: green up, orange down. */
+  --sc-roller-grad-from-up: #4ade80; /* (SVG) green-400 */
+  --sc-roller-grad-to-up: #16a34a; /* (SVG) green-600 */
+  --sc-roller-glow-up: #22c55e; /* (SVG) green-500 */
+  --sc-roller-grad-from-down: #fb923c; /* (SVG) orange-400 */
+  --sc-roller-grad-to-down: #ea580c; /* (SVG) orange-600 */
+  --sc-roller-glow-down: #f97316; /* (SVG) orange-500 */
+
+  --sc-roller-opacity: 0.8;
+  --sc-roller-opacity-hover: 1;
+  --sc-roller-opacity-focus: 0.6;
+  --sc-roller-opacity-dragging: 1;
+  --sc-roller-scale-dragging: 1.05;
+
+  /* ======================= KNURLING LINES ========================= */
+  /* At rest — jewel tones. Dark, because the roller face is light. */
+  --sc-line-1: #172554; /* (SVG) blue-950 */
+  --sc-line-2: #022c22; /* (SVG) emerald-950 */
+  --sc-line-3: #4c0519; /* (SVG) rose-950 */
+
+  /* While travelling up — greens. */
+  --sc-line-up-1: #14532d; /* (SVG) green-900 */
+  --sc-line-up-2: #166534; /* (SVG) green-800 */
+  --sc-line-up-3: #15803d; /* (SVG) green-700 */
+
+  /* While travelling down — oranges. */
+  --sc-line-down-1: #7c2d12; /* (SVG) orange-900 */
+  --sc-line-down-2: #9a3412; /* (SVG) orange-800 */
+  --sc-line-down-3: #c2410c; /* (SVG) orange-700 */
+
+  /* =========================== ARROWS ============================= */
+  /* Up = green, down = orange. Both are chosen for hue distance from the
+     roller's own cyan, so the active arrow reads instantly at 12px. */
+  --sc-arrow-up-active: #22c55e; /* (SVG) green-500 */
+  --sc-arrow-up-active-stroke: #14532d; /* (SVG) green-900 */
+  --sc-arrow-down-active: #f97316; /* (SVG) orange-500 */
+  --sc-arrow-down-active-stroke: #7c2d12; /* (SVG) orange-900 */
+  --sc-arrow-opacity: 0.6; /* (SVG) at rest */
+  --sc-arrow-opacity-dim: 0.3; /* (SVG) other arrow while dragging */
+  --sc-arrow-opacity-active: 1; /* (SVG) hovered or active */
+  --sc-arrow-transition: 0.15s; /* (SVG) */
+
+  /* ===================== VALIDITY / FORMULA ======================= */
+  --sc-valid: #22c55e; /* green tick + valid border, matches scroll-up */
+  --sc-invalid: #ef4444; /* red no-entry + invalid border */
+  --sc-valid-ring: color-mix(in srgb, var(--sc-valid) 35%, transparent);
+  --sc-invalid-ring: color-mix(in srgb, var(--sc-invalid) 35%, transparent);
+  --sc-status-size: 1rem;
+  --sc-resize-min-width: 4rem;
+  --sc-revert-color: #f59e0b;
+  --sc-revert-hover: #fbbf24;
+
+  /* Syntax colours for the formula overlay. */
+  --sc-tok-number: #e2e8f0;
+  --sc-tok-unit: #38bdf8;
+  --sc-tok-func: #c084fc;
+  --sc-tok-ident: #34d399;
+  --sc-tok-unknown: #ef4444;
+  --sc-tok-arith: #fbbf24;
+  --sc-tok-relational: #f472b6;
+  --sc-tok-logical: #fb923c;
+  --sc-tok-ternary: #f472b6;
+  --sc-tok-error: #ef4444;
+
+  /* Rainbow parentheses, cycling every four nesting levels. */
+  --sc-paren-0: #facc15;
+  --sc-paren-1: #22d3ee;
+  --sc-paren-2: #f472b6;
+  --sc-paren-3: #a3e635;
+  --sc-paren-match-bg: color-mix(in srgb, var(--sc-accent) 35%, transparent);
+
+  /* =========================== MOTION ============================= */
+  --sc-transition: 150ms;
+  --sc-transition-roller: 300ms;
+  --sc-easing: ease;
+
+  /* =========================== CURSORS ============================ */
+  --sc-cursor-scrub: ns-resize;
+  --sc-cursor-text: text;
+  --sc-cursor-disabled: not-allowed;
+
+  /* ========================== DISABLED ============================ */
+  --sc-opacity-disabled: 0.5;
+
+  display: flex;
+  align-items: center;
+  gap: var(--sc-gap);
+  width: var(--sc-width);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.sc-root *,
+.sc-root *::before,
+.sc-root *::after {
+  box-sizing: border-box;
+}
+
+/* Optional light preset: <DimensionInput className="sc-root--light" />, or
+   just set the tokens yourself. */
+.sc-root--light {
+  --sc-bg: #ffffff;
+  --sc-border: #cbd5e1;
+  --sc-border-hover: #94a3b8;
+  --sc-text: #0f172a;
+  --sc-text-dragging: #0f172a;
+  --sc-placeholder: #94a3b8;
+  --sc-roller-face: #f1f5f9;
+  --sc-selection-bg: #a5f3fc;
+  --sc-selection-text: #0f172a;
+  --sc-line-1: #1e3a8a;
+  --sc-line-2: #065f46;
+  --sc-line-3: #9f1239;
+}
+
+/* ------------------------------------------------------------------ field */
+
+.sc-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0; /* lets the input shrink inside flex/grid parents */
+  /* The highlight overlay inherits its font from here, so it always shares
+     metrics with the input and the caret never drifts. */
+  font-size: var(--sc-font-size);
+  font-family: var(--sc-font-family);
+  font-weight: var(--sc-font-weight);
+  letter-spacing: var(--sc-letter-spacing);
+}
+
+.sc-input {
+  width: 100%;
+  min-width: 0;
+  height: var(--sc-height);
+  padding: 0 var(--sc-padding-x);
+  background: var(--sc-bg);
+  border: var(--sc-border-width) var(--sc-border-style) var(--sc-border);
+  border-radius: var(--sc-radius);
+  color: var(--sc-text);
+  caret-color: var(--sc-caret);
+  font-size: var(--sc-font-size);
+  font-family: var(--sc-font-family);
+  font-weight: var(--sc-font-weight);
+  letter-spacing: var(--sc-letter-spacing);
+  text-align: var(--sc-text-align);
+  box-shadow: var(--sc-shadow);
+  outline: none;
+  transition:
+    border-color var(--sc-transition) var(--sc-easing),
+    background-color var(--sc-transition) var(--sc-easing),
+    box-shadow var(--sc-transition) var(--sc-easing),
+    color var(--sc-transition) var(--sc-easing);
+  /* The drag gesture owns vertical panning on this element. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.sc-input::placeholder {
+  color: var(--sc-placeholder);
+}
+
+.sc-input::selection {
+  background: var(--sc-selection-bg);
+  color: var(--sc-selection-text);
+}
+
+.sc-input:hover:not(:disabled):not(:focus) {
+  background: var(--sc-bg-hover);
+  border-color: var(--sc-border-hover);
+  color: var(--sc-text-hover);
+}
+
+.sc-input:focus {
+  background: var(--sc-bg-focus);
+  border-color: var(--sc-border-focus);
+  color: var(--sc-text-focus);
+  /* Text selection needs to work again once you're typing. */
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: auto;
+}
+
+.sc-input--dragging {
+  background: var(--sc-bg-dragging);
+  border-color: var(--sc-border-dragging);
+  color: var(--sc-text-dragging);
+  font-weight: var(--sc-font-weight-dragging);
+  letter-spacing: var(--sc-letter-spacing-dragging);
+  box-shadow: var(--sc-shadow-dragging);
+}
+
+.sc-input:disabled {
+  background: var(--sc-bg-disabled);
+  border-color: var(--sc-border-disabled);
+  color: var(--sc-text-disabled);
+  opacity: var(--sc-opacity-disabled);
+  cursor: var(--sc-cursor-disabled);
+}
+
+.sc-root--disabled {
+  pointer-events: none;
+}
+
+/* Keyboard users still get a visible focus ring. */
+.sc-input:focus-visible {
+  box-shadow: 0 0 0 var(--sc-focus-ring-width) var(--sc-focus-ring-color);
+}
+
+/* ------------------------------------------------ validity / formula UI */
+
+.sc-root--valid .sc-input {
+  border-color: var(--sc-valid);
+}
+
+.sc-root--valid .sc-input:focus-visible {
+  box-shadow: 0 0 0 var(--sc-focus-ring-width) var(--sc-valid-ring);
+}
+
+.sc-root--invalid .sc-input,
+.sc-root--invalid .sc-input:hover:not(:disabled):not(:focus) {
+  border-color: var(--sc-invalid);
+}
+
+.sc-root--invalid .sc-input:focus-visible {
+  box-shadow: 0 0 0 var(--sc-focus-ring-width) var(--sc-invalid-ring);
+}
+
+/* Room for the status icon / revert button so text never runs underneath. */
+.sc-root--valid .sc-input,
+.sc-root--invalid .sc-input {
+  padding-right: calc(var(--sc-padding-x) + var(--sc-status-size) + 0.375rem);
+}
+
+.sc-status,
+.sc-revert {
+  position: absolute;
+  right: calc(var(--sc-padding-x) * 0.75);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 0;
+}
+
+.sc-revert {
+  pointer-events: auto;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sc-revert-color);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sc-revert:hover,
+.sc-revert:focus-visible {
+  color: var(--sc-revert-hover);
+  background: color-mix(in srgb, var(--sc-revert-color) 18%, transparent);
+}
+
+/* Coarse pointers need a real tap target for the revert button. */
+@media (pointer: coarse) {
+  .sc-revert {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+/* ---- highlight overlay ---- */
+
+/* The mirror sits underneath a transparent input. Both must share every
+   metric that affects glyph position, or the caret will drift. */
+.sc-highlight {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sc-padding-x);
+  font-size: var(--sc-font-size);
+  font-family: var(--sc-font-family);
+  font-weight: var(--sc-font-weight);
+  letter-spacing: var(--sc-letter-spacing);
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+  border: var(--sc-border-width) solid transparent;
+  border-radius: var(--sc-radius);
+}
+
+/* Hide the input's own glyphs but keep its caret and selection. */
+.sc-input--transparent {
+  color: transparent;
+  caret-color: var(--sc-caret);
+  position: relative;
+  background: transparent;
+}
+
+.sc-input--transparent::selection {
+  background: var(--sc-selection-bg);
+  color: transparent;
+}
+
+.sc-tok-number { color: var(--sc-tok-number); }
+.sc-tok-unit { color: var(--sc-tok-unit); font-style: italic; }
+.sc-tok-func { color: var(--sc-tok-func); }
+.sc-tok-ident { color: var(--sc-tok-ident); }
+.sc-tok-unknown { color: var(--sc-tok-unknown); text-decoration: underline wavy; }
+.sc-tok-arith { color: var(--sc-tok-arith); }
+.sc-tok-relational { color: var(--sc-tok-relational); }
+.sc-tok-logical { color: var(--sc-tok-logical); }
+.sc-tok-ternary { color: var(--sc-tok-ternary); }
+.sc-tok-error { color: var(--sc-tok-error); text-decoration: underline wavy; }
+
+.sc-tok-paren-0 { color: var(--sc-paren-0); }
+.sc-tok-paren-1 { color: var(--sc-paren-1); }
+.sc-tok-paren-2 { color: var(--sc-paren-2); }
+.sc-tok-paren-3 { color: var(--sc-paren-3); }
+
+.sc-tok-matched {
+  background: var(--sc-paren-match-bg);
+  border-radius: 2px;
+}
+
+.sc-tok-bad {
+  text-decoration: underline wavy var(--sc-invalid);
+}
+
+/* ---- resizing ---- */
+
+/* `flex: 0 0 auto` is applied inline on mount, not here — the component has
+   to measure the flexed width first, otherwise the field would start
+   collapsed to its content instead of filling the row like its siblings. */
+.sc-field--resizable {
+  overflow: hidden; /* `resize` is ignored while overflow is visible */
+  min-width: var(--sc-resize-min-width, 4rem);
+  max-width: 100%;
+}
+
+.sc-field--resize-y {
+  min-height: var(--sc-height);
+}
+
+/* Let the input fill a vertically-resized field. */
+.sc-field--resize-y .sc-input {
+  height: 100%;
+}
+
+/* ----------------------------------------------------------------- roller */
+
+.sc-roller {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sc-roller-width);
+  height: var(--sc-height);
+  cursor: var(--sc-cursor-scrub);
+  opacity: var(--sc-roller-opacity);
+  transition:
+    opacity var(--sc-transition-roller) var(--sc-easing),
+    transform var(--sc-transition-roller) var(--sc-easing);
+  /* Critical for touch: stops the browser scrolling the page mid-drag. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sc-root:hover .sc-roller {
+  opacity: var(--sc-roller-opacity-hover);
+}
+
+.sc-roller--focused {
+  opacity: var(--sc-roller-opacity-focus);
+}
+
+.sc-roller--dragging,
+.sc-root:hover .sc-roller--dragging {
+  opacity: var(--sc-roller-opacity-dragging);
+  transform: scale(var(--sc-roller-scale-dragging));
+}
+
+.sc-roller svg {
+  overflow: visible;
+  display: block;
+}
+
+/* ------------------------------------------------- touch & responsiveness */
+
+/* Coarse pointers (finger, stylus) get a taller target — 44px is the
+   Apple/Material minimum for a reliable tap. Override these too. */
+@media (pointer: coarse) {
+  .sc-root {
+    --sc-height: var(--sc-height-coarse, 2.75rem);
+    --sc-roller-width: var(--sc-roller-width-coarse, 2.5rem);
+    --sc-font-size: var(--sc-font-size-coarse, 1rem); /* >=16px stops iOS zoom */
+    --sc-gap: var(--sc-gap-coarse, 0.5rem);
+  }
+
+  .sc-roller svg {
+    transform: scale(var(--sc-roller-scale-coarse, 1.15));
+  }
+}
+
+/* Narrow containers: tighten spacing so the field keeps its room. */
+@container (max-width: 180px) {
+  .sc-root {
+    --sc-gap: var(--sc-gap-narrow, 0.25rem);
+    --sc-roller-width: var(--sc-roller-width-narrow, 1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-input,
+  .sc-roller {
+    transition: none;
+  }
+}
