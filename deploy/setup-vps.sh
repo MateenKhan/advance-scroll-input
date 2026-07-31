@@ -61,16 +61,16 @@ nginx -t
 systemctl reload nginx
 systemctl enable nginx >/dev/null 2>&1 || true
 
-echo "==> Blocking 8080 from the public internet"
+echo "==> Blocking 8081 from the public internet"
 # Coolify's proxy reaches it over the docker bridge, not from outside.
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
-  ufw deny 8080/tcp >/dev/null || true
+  ufw deny 8081/tcp >/dev/null || true
 fi
 
 cat <<'EOF'
 
 =======================================================================
- Server is ready. nginx serves /var/www/sites/<domain>/ on port 8080.
+ Server is ready. nginx serves /var/www/sites/<domain>/ on port 8081.
 =======================================================================
 
 Remaining steps, once each:
@@ -93,7 +93,7 @@ Remaining steps, once each:
         services:
           host-nginx:
             loadBalancer:
-              servers: [{ url: "http://host.docker.internal:8080" }]
+              servers: [{ url: "http://host.docker.internal:8081" }]
 
     Every site reuses the same `host-nginx` service — only the router
     block changes.
@@ -103,6 +103,6 @@ Remaining steps, once each:
 
 Check it locally before involving the proxy:
 
-    curl -H 'Host: scroll-input.jugaaadi.com' -I http://127.0.0.1:8080/
+    curl -H 'Host: scroll-input.jugaaadi.com' -I http://127.0.0.1:8081/
 
 EOF

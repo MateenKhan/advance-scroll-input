@@ -70,13 +70,13 @@ sudo ln -s /etc/nginx/sites-available/scroll-input /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-nginx listens on **8080** — Coolify's proxy owns 80/443, so a second nginx
+nginx listens on **8081** — Coolify's proxy owns 80/443, so a second nginx
 there will not start.
 
 ### 5. Route the domain through Coolify's proxy
 
 See [step 4 of the fallback section](#4-route-through-coolifys-proxy) below —
-same dynamic configuration, pointing at port 8080.
+same dynamic configuration, pointing at port 8081.
 
 ### 6. Deploy
 
@@ -168,7 +168,7 @@ the script. Useful if the VPS has no outbound access to GitHub Actions, or you
 want to deploy without pushing.
 
 Coolify's proxy already binds ports 80 and 443, so a second nginx there will
-not start. Host nginx listens on 8080 and Coolify's proxy forwards to it,
+not start. Host nginx listens on 8081 and Coolify's proxy forwards to it,
 keeping TLS with Coolify.
 
 ### 1. Install
@@ -192,7 +192,7 @@ sudo rsync -a --delete /opt/advance-scroll-input/website/build/ /var/www/scroll-
 sudo chown -R www-data:www-data /var/www/scroll-input
 ```
 
-### 3. nginx site on 8080
+### 3. nginx site on 8081
 
 ```bash
 sudo cp /opt/advance-scroll-input/deploy/nginx-scroll-input.conf \
@@ -200,8 +200,8 @@ sudo cp /opt/advance-scroll-input/deploy/nginx-scroll-input.conf \
 sudo ln -s /etc/nginx/sites-available/scroll-input /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 
-curl -I http://127.0.0.1:8080/     # expect 200 before going further
-sudo ufw deny 8080                 # keep it off the public internet
+curl -I http://127.0.0.1:8081/     # expect 200 before going further
+sudo ufw deny 8081                 # keep it off the public internet
 ```
 
 ### 4. Route through Coolify's proxy
@@ -230,14 +230,14 @@ http:
     scroll-input:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:8080"
+          - url: "http://host.docker.internal:8081"
 ```
 
 **Caddy** (`scroll-input.caddy`):
 
 ```
 scroll-input.jugaaadi.com {
-    reverse_proxy host.docker.internal:8080
+    reverse_proxy host.docker.internal:8081
 }
 ```
 
@@ -258,4 +258,4 @@ sudo bash /opt/advance-scroll-input/deploy/deploy.sh
 | Assets 404, page unstyled | `url` in `docusaurus.config.ts` ≠ live domain |
 | No certificate | DNS not propagated, or domain entered without `https://` |
 | 502 *(host-nginx route)* | Proxy can't reach the host — use `172.17.0.1` instead of `host.docker.internal`; check `ip -4 addr show docker0` |
-| nginx won't start *(host-nginx route)* | Port taken — `sudo ss -tlnp \| grep :8080` |
+| nginx won't start *(host-nginx route)* | Port taken — `sudo ss -tlnp \| grep :8081` |
