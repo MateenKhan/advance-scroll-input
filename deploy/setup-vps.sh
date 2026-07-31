@@ -70,10 +70,19 @@ if ! systemctl is-active --quiet nginx; then
   exit 1
 fi
 
-echo "==> Blocking 8081 from the public internet"
-# Coolify's proxy reaches it over the docker bridge, not from outside.
+echo "==> Firewall: allow Docker to reach 8081, keep the internet out"
+# nginx runs on the HOST, so Traefik's connection from the bridge arrives on
+# the host's INPUT chain and ufw filters it. A blanket `deny` here also blocks
+# Traefik, which surfaces as a 504 from Cloudflare.
+#
+# ufw's default incoming policy is already deny, so the internet is covered;
+# all that's needed is a source-scoped allow for the Docker subnets.
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
-  ufw deny 8081/tcp >/dev/null || true
+  ufw delete deny 8081/tcp >/dev/null 2>&1 || true
+  ufw allow from 10.0.0.0/8 to any port 8081 proto tcp >/dev/null || true
+  # Standard Docker range too, for hosts that don't use Coolify's 10.0.x.x.
+  ufw allow from 172.16.0.0/12 to any port 8081 proto tcp >/dev/null || true
+  ufw reload >/dev/null || true
 fi
 
 cat <<'EOF'
