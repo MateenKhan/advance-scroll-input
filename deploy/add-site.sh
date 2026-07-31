@@ -47,16 +47,27 @@ if [[ ! -f "$SITES_ROOT/$DOMAIN/index.html" ]]; then
 fi
 
 echo "==> Writing Traefik router $DYNAMIC_DIR/$NAME.yaml"
+# Field names mirror Coolify's own coolify.yaml on this host: entrypoints are
+# `http`/`https`, and the key is lowercase `certresolver`.
+#
+# The http router is required — it answers the Let's Encrypt HTTP-01
+# challenge. Without it no certificate is issued and Cloudflare reports 526.
 cat > "$DYNAMIC_DIR/$NAME.yaml" <<EOF
 http:
   routers:
-    $NAME:
-      rule: "Host(\`$DOMAIN\`)"
+    $NAME-http:
+      entryPoints:
+        - http
+      service: host-nginx
+      rule: Host(\`$DOMAIN\`)
+
+    $NAME-https:
       entryPoints:
         - https
       service: host-nginx
+      rule: Host(\`$DOMAIN\`)
       tls:
-        certResolver: letsencrypt
+        certresolver: letsencrypt
 EOF
 
 echo "==> Done — Traefik reloads on its own, nothing restarted."

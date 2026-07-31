@@ -1,18 +1,24 @@
 # Defines the nginx backend ONCE. Every site's router points at it.
 #
-# Install this a single time, then never touch it again:
-#   Coolify UI -> Server -> Proxy -> Dynamic Configurations -> new file
-#   (or drop it in /data/coolify/proxy/dynamic/ on the host)
+# Install a single time, then never touch it again:
+#   /data/coolify/proxy/dynamic/00-backend.yaml
+#   (or Coolify UI -> Server -> Proxy -> Dynamic Configurations)
 #
-# Traefik merges every file in that directory into one configuration, so the
-# service defined here is visible to all the per-site router files.
+# Traefik merges every file in that directory into one configuration, so this
+# service is visible to all the per-site router files.
 
 http:
   services:
     host-nginx:
       loadBalancer:
         servers:
-          # host.docker.internal resolves to the docker0 gateway (10.0.0.1)
-          # because coolify-proxy runs with ExtraHosts host-gateway.
-          # 8081 is the host nginx — 8080 is already taken by Traefik itself.
-          - url: "http://host.docker.internal:8081"
+          -
+            # host.docker.internal resolves to the docker0 gateway (10.0.0.1)
+            # because coolify-proxy runs with ExtraHosts host-gateway.
+            #
+            # Port 8081, not 8080 — Traefik itself already publishes 8080.
+            #
+            # Deliberately NOT the public IP (the way coolify's kanban.yaml
+            # does it): 8081 is firewalled from the internet, so a public-IP
+            # URL would be blocked by our own ufw rule.
+            url: 'http://host.docker.internal:8081'

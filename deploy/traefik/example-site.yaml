@@ -1,19 +1,30 @@
 # THE PER-PROJECT FILE. This is the entire thing.
 #
-# Copy it per new subdomain, changing only the router name and the hostname.
-# Save as e.g. table.yaml in Coolify -> Server -> Proxy -> Dynamic
-# Configurations. Traefik hot-reloads the directory — nothing restarts, and
-# no other site is affected.
+# Copy per new subdomain, changing only the router names and the hostname.
+# Save as e.g. /data/coolify/proxy/dynamic/table.yaml — Traefik watches that
+# directory and hot-reloads. Nothing restarts, no other site is affected.
 #
 # nginx needs no change at all: it derives the web root from the Host header,
 # so table.jugaaadi.com is served from /var/www/sites/table.jugaaadi.com/.
+#
+# Field names mirror Coolify's own coolify.yaml: entrypoints are `http` and
+# `https` (not web/websecure), and the key is lowercase `certresolver`.
 
 http:
   routers:
-    table: # unique name for this router — anything, just don't repeat it
-      rule: "Host(`table.jugaaadi.com`)" # the subdomain being added
+    # The http router is not optional — it is what answers the Let's Encrypt
+    # HTTP-01 challenge. Without it no certificate is ever issued and the
+    # site fails TLS at the origin (Cloudflare reports 526).
+    table-http:
       entryPoints:
-        - https # Traefik's TLS entrypoint (port 443)
-      service: host-nginx # the shared backend from 00-backend.yaml
+        - http
+      service: host-nginx
+      rule: Host(`table.jugaaadi.com`)
+
+    table-https:
+      entryPoints:
+        - https
+      service: host-nginx
+      rule: Host(`table.jugaaadi.com`)
       tls:
-        certResolver: letsencrypt # makes Traefik fetch a cert for this host
+        certresolver: letsencrypt
