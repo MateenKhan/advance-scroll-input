@@ -58,8 +58,17 @@ ln -sfn /etc/nginx/sites-available/sites /etc/nginx/sites-enabled/sites
 rm -f /etc/nginx/sites-enabled/default
 
 nginx -t
-systemctl reload nginx
+# `restart`, not `reload`: installing the nginx package auto-starts it with a
+# default site on port 80, which Traefik already owns, so the unit is sitting
+# in `failed` by the time we get here. reload cannot revive a dead unit.
+systemctl restart nginx
 systemctl enable nginx >/dev/null 2>&1 || true
+
+if ! systemctl is-active --quiet nginx; then
+  echo "nginx failed to start:" >&2
+  journalctl -u nginx --no-pager -n 20 >&2
+  exit 1
+fi
 
 echo "==> Blocking 8081 from the public internet"
 # Coolify's proxy reaches it over the docker bridge, not from outside.
