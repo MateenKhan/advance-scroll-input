@@ -1,0 +1,19 @@
+# THE PER-PROJECT FILE. This is the entire thing.
+#
+# Copy it per new subdomain, changing only the router name and the hostname.
+# Save as e.g. table.yaml in Coolify -> Server -> Proxy -> Dynamic
+# Configurations. Traefik hot-reloads the directory — nothing restarts, and
+# no other site is affected.
+#
+# nginx needs no change at all: it derives the web root from the Host header,
+# so table.jugaaadi.com is served from /var/www/sites/table.jugaaadi.com/.
+
+http:
+  routers:
+    table: # unique name for this router — anything, just don't repeat it
+      rule: "Host(`table.jugaaadi.com`)" # the subdomain being added
+      entryPoints:
+        - https # Traefik's TLS entrypoint (port 443)
+      service: host-nginx # the shared backend from 00-backend.yaml
+      tls:
+        certResolver: letsencrypt # makes Traefik fetch a cert for this host
