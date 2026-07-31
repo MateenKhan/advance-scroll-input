@@ -23,7 +23,7 @@
   "bugs": {
     "url": "https://github.com/MateenKhan/advance-scroll-input/issues"
   },
-  "homepage": "https://github.com/MateenKhan/advance-scroll-input#readme",
+  "homepage": "https://scroll-input.jugaaadi.com",
   "type": "module",
   "sideEffects": [
     "*.css"

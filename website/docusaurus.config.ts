@@ -12,9 +12,7 @@ const config: Config = {
 
   future: { v4: true },
 
-  // TODO: set this to the real domain before deploying — wrong values break
-  // asset paths on the built site.
-  url: 'https://advance-scroll-input.example.com',
+  url: 'https://scroll-input.jugaaadi.com',
   baseUrl: '/',
 
   organizationName: 'MateenKhan',

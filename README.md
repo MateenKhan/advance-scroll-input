@@ -1,5 +1,7 @@
 # @jugaaadi/advance-scroll-input
 
+### 👉 [Live demo & docs — scroll-input.jugaaadi.com](https://scroll-input.jugaaadi.com)
+
 A touch-friendly number input with a **vertical roller scrubber** and **unit-aware parsing**.
 
 Drag the field or the roller up/down to scrub the value. Tap an arrow to step by one. Click to type — and type it however you like: `10ft`, `100in`, `123mm`, `123"`, `123'`, `5' 6"`, `1 1/2 in`. The value is stored canonically in millimetres, so switching display units never loses precision.
@@ -499,6 +501,12 @@ scroll_component/
 | `npm run dev`       | Vite demo at http://localhost:5178      |
 | `npm run build`     | ESM + CJS + types + CSS into `dist/`    |
 | `npm run typecheck` | `tsc --noEmit`                          |
+
+## Links
+
+- **Demo & docs** — https://scroll-input.jugaaadi.com
+- **npm** — https://www.npmjs.com/package/@jugaaadi/advance-scroll-input
+- **GitHub** — https://github.com/MateenKhan/advance-scroll-input
 
 ## Contributing
 
