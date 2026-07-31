@@ -1,99 +1,121 @@
-# Deploying the docs site to a VPS running Coolify
+# Deploying the docs site
 
-Serves the built site from a plain folder via host nginx, instead of letting
-Coolify build a Docker image.
+The site is a **static** Docusaurus build — plain HTML, CSS and JS. Nothing
+runs server-side, so nothing needs Node in production.
 
-**The constraint:** Coolify's proxy already binds ports 80 and 443. A second
-nginx on those ports will not start. So host nginx listens on **8080** and
-Coolify's proxy forwards to it — Coolify keeps handling TLS and certificates.
-
-If you would rather not run host nginx at all, use `website/Dockerfile`
-instead and point Coolify at Base Directory `/website`. That path auto-deploys
-on every push; this one does not.
+Docusaurus emits directory-based routes (`/docs/intro/index.html`), so any
+static server resolves them with default `index.html` handling. No SPA
+fallback, no `try_files` rules, no custom nginx config required.
 
 ---
 
-## 0. Which proxy is Coolify running?
+## Recommended: Coolify Static build pack
 
-The routing step differs. Check in the Coolify UI under **Server → Proxy**, or:
+Builds on every commit and serves the output folder with nginx. You keep
+deploy-on-push, and production is nginx serving files — no Node runtime, no
+heavy application image.
 
-```bash
-docker ps --format '{{.Names}}' | grep -i -E 'traefik|caddy'
-```
+**New Resource → Public Repository** → `https://github.com/MateenKhan/advance-scroll-input`
 
-## 1. DNS
+| Setting | Value |
+| --- | --- |
+| Branch | `main` |
+| Build Pack | **Static** |
+| **Base Directory** | `/website` |
+| Install Command | `npm ci` |
+| Build Command | `npm run build` |
+| **Publish / Output Directory** | `build` |
+| Port | `80` |
+| Domain | `https://scroll-input.jugaaadi.com` |
 
-Point the subdomain at the VPS (skip if you have a `*.jugaaadi.com` wildcard):
+Enable the GitHub webhook so pushes to `main` redeploy automatically. Coolify
+issues the TLS certificate once DNS resolves — enter the domain **with**
+`https://`.
+
+### DNS
+
+Skip if you already have a `*.jugaaadi.com` wildcard:
 
 ```
 Type: A     Name: scroll-input     Value: <your VPS IP>
 ```
 
-## 2. Install Node and nginx
+### Gotchas
+
+- **Base Directory `/website` is the one that bites.** Without it Coolify
+  builds from the repo root, finds the library's `package.json`, and produces
+  nothing usable.
+- **Publish Directory is `build`**, relative to the base directory. Docusaurus
+  writes there, not to `dist` or `out`.
+- If assets 404 and the page renders unstyled, `url` in
+  `website/docusaurus.config.ts` doesn't match the live domain. Fix and redeploy.
+
+---
+
+## Alternative: Dockerfile
+
+`website/Dockerfile` is a two-stage build — Node compiles, nginx serves. Use it
+if you want the nginx config version-controlled (caching headers, security
+headers) rather than relying on Coolify's defaults.
+
+Same setup as above, but Build Pack **Dockerfile**, Dockerfile Location
+`/website/Dockerfile`. Also deploys on commit.
+
+---
+
+## Fallback: host nginx, no containers
+
+Only if you want zero containers. **You lose deploy-on-commit** — pushes do
+nothing until you run the script.
+
+Coolify's proxy already binds ports 80 and 443, so a second nginx there will
+not start. Host nginx listens on 8080 and Coolify's proxy forwards to it,
+keeping TLS with Coolify.
+
+### 1. Install
 
 ```bash
-sudo apt update
-sudo apt install -y nginx rsync git
-
-# Node 22 — the site needs >= 18
+sudo apt update && sudo apt install -y nginx rsync git
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
-node --version
-```
-
-Remove nginx's default site so nothing tries to hold port 80:
-
-```bash
 sudo rm -f /etc/nginx/sites-enabled/default
 ```
 
-## 3. Clone and build
+### 2. Clone, build, publish
 
 ```bash
 sudo git clone https://github.com/MateenKhan/advance-scroll-input.git /opt/advance-scroll-input
 cd /opt/advance-scroll-input/website
-sudo npm ci
-sudo npm run build          # output lands in website/build
-```
+sudo npm ci && sudo npm run build
 
-Publish it:
-
-```bash
 sudo mkdir -p /var/www/scroll-input
 sudo rsync -a --delete /opt/advance-scroll-input/website/build/ /var/www/scroll-input/
 sudo chown -R www-data:www-data /var/www/scroll-input
 ```
 
-## 4. nginx site on port 8080
+### 3. nginx site on 8080
 
 ```bash
 sudo cp /opt/advance-scroll-input/deploy/nginx-scroll-input.conf \
         /etc/nginx/sites-available/scroll-input
 sudo ln -s /etc/nginx/sites-available/scroll-input /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
+sudo nginx -t && sudo systemctl reload nginx
+
+curl -I http://127.0.0.1:8080/     # expect 200 before going further
+sudo ufw deny 8080                 # keep it off the public internet
 ```
 
-Verify locally before involving the proxy:
+### 4. Route through Coolify's proxy
+
+Check which proxy you run:
 
 ```bash
-curl -I http://127.0.0.1:8080/
-# expect: HTTP/1.1 200 OK
+docker ps --format '{{.Names}}' | grep -iE 'traefik|caddy'
 ```
 
-Keep 8080 off the public internet — Coolify reaches it from inside the host:
+Coolify UI → **Server → Proxy → Dynamic Configurations** → add a file.
 
-```bash
-sudo ufw deny 8080
-```
-
-## 5. Route the domain through Coolify's proxy
-
-Coolify UI → **Server → Proxy → Dynamic Configurations** → add a new file.
-
-### If Traefik (Coolify default)
-
-File `scroll-input.yaml`:
+**Traefik** (`scroll-input.yaml`):
 
 ```yaml
 http:
@@ -112,9 +134,7 @@ http:
           - url: "http://host.docker.internal:8080"
 ```
 
-### If Caddy
-
-File `scroll-input.caddy`:
+**Caddy** (`scroll-input.caddy`):
 
 ```
 scroll-input.jugaaadi.com {
@@ -122,30 +142,21 @@ scroll-input.jugaaadi.com {
 }
 ```
 
-Save and let Coolify restart the proxy. TLS is issued automatically once DNS
-resolves.
-
-> If `host.docker.internal` doesn't resolve from the proxy container, use the
-> Docker bridge gateway instead — usually `172.17.0.1`. Confirm with
-> `ip -4 addr show docker0`.
-
-## 6. Redeploying
+### 5. Redeploying
 
 ```bash
 sudo bash /opt/advance-scroll-input/deploy/deploy.sh
 ```
 
-Pulls `main`, rebuilds, syncs to the web root, reloads nginx.
-
-To automate, add a cron entry or a GitHub Action that SSHes in and runs it —
-unlike the Dockerfile route, pushes do **not** deploy themselves here.
+---
 
 ## Troubleshooting
 
 | Symptom | Cause |
 | --- | --- |
-| nginx won't start | Something else holds the port — `sudo ss -tlnp \| grep :8080` |
-| 502 from the proxy | Proxy container can't reach the host; swap `host.docker.internal` for `172.17.0.1` |
-| 404 on `/docs/intro` | Web root wrong, or the `try_files ... $uri.html` line is missing |
-| Assets 404, page unstyled | `url` in `docusaurus.config.ts` doesn't match the real domain — fix and rebuild |
-| No certificate | DNS hasn't propagated, or the domain wasn't entered with `https://` in Coolify |
+| Build produces nothing | Base Directory isn't `/website` |
+| 404 on every route | Publish Directory isn't `build` |
+| Assets 404, page unstyled | `url` in `docusaurus.config.ts` ≠ live domain |
+| No certificate | DNS not propagated, or domain entered without `https://` |
+| 502 *(host-nginx route)* | Proxy can't reach the host — use `172.17.0.1` instead of `host.docker.internal`; check `ip -4 addr show docker0` |
+| nginx won't start *(host-nginx route)* | Port taken — `sudo ss -tlnp \| grep :8080` |
