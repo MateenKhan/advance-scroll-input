@@ -9,7 +9,90 @@ fallback, no `try_files` rules, no custom nginx config required.
 
 ---
 
-## Recommended: Coolify Static build pack
+## Recommended: GitHub Actions → rsync → host nginx
+
+**No container, and it still deploys on every commit.** GitHub's runners build
+the site; only the static output is copied to the VPS. The server needs nginx
+and an SSH key — not Node, not Docker, not a CI server.
+
+Workflow: [`.github/workflows/deploy-docs.yml`](../.github/workflows/deploy-docs.yml)
+
+### 1. Create a deploy user and web root on the VPS
+
+```bash
+sudo adduser --disabled-password --gecos "" deploy
+sudo mkdir -p /var/www/scroll-input
+sudo chown -R deploy:www-data /var/www/scroll-input
+sudo chmod -R 775 /var/www/scroll-input
+```
+
+### 2. Generate a deploy key
+
+Run this **on your own machine**, not the server:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/scroll_input_deploy -C "github-actions-deploy" -N ""
+```
+
+Put the **public** half on the VPS:
+
+```bash
+sudo -u deploy mkdir -p /home/deploy/.ssh
+sudo -u deploy tee -a /home/deploy/.ssh/authorized_keys < ~/.ssh/scroll_input_deploy.pub
+sudo -u deploy chmod 700 /home/deploy/.ssh
+sudo -u deploy chmod 600 /home/deploy/.ssh/authorized_keys
+```
+
+### 3. Add the secrets to GitHub
+
+Repo → **Settings → Secrets and variables → Actions → New repository secret**
+
+| Secret | Value |
+| --- | --- |
+| `SSH_HOST` | VPS IP or hostname |
+| `SSH_USER` | `deploy` |
+| `SSH_PRIVATE_KEY` | contents of `~/.ssh/scroll_input_deploy` (the **private** file) |
+| `SSH_PORT` | only if not `22` |
+| `WEB_ROOT` | only if not `/var/www/scroll-input` |
+
+> The private key never appears in the repo or in logs — GitHub masks secrets.
+> Give the `deploy` user nothing beyond write access to the web root.
+
+### 4. Install nginx and the site config
+
+```bash
+sudo apt update && sudo apt install -y nginx rsync
+sudo rm -f /etc/nginx/sites-enabled/default
+
+sudo curl -o /etc/nginx/sites-available/scroll-input \
+  https://raw.githubusercontent.com/MateenKhan/advance-scroll-input/main/deploy/nginx-scroll-input.conf
+sudo ln -s /etc/nginx/sites-available/scroll-input /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+nginx listens on **8080** — Coolify's proxy owns 80/443, so a second nginx
+there will not start.
+
+### 5. Route the domain through Coolify's proxy
+
+See [step 4 of the fallback section](#4-route-through-coolifys-proxy) below —
+same dynamic configuration, pointing at port 8080.
+
+### 6. Deploy
+
+Push to `main`, or run the workflow by hand from the **Actions** tab. Check
+progress there; the build takes ~1–2 minutes.
+
+---
+
+## Alternative: Coolify Static build pack
+
+**This produces a container.** Coolify is Docker end to end — every resource it
+manages is a container — so the Static pack builds an `nginx:alpine` image
+(~50 MB) holding your files. There is no Node runtime and no app server, which
+makes it the lightest thing Coolify can run, but it is still Docker.
+
+Use it if you would rather not manage nginx or SSH keys yourself.
 
 Builds on every commit and serves the output folder with nginx. You keep
 deploy-on-push, and production is nginx serving files — no Node runtime, no
@@ -77,10 +160,12 @@ Same setup as above, but Build Pack **Dockerfile**, Dockerfile Location
 
 ---
 
-## Fallback: host nginx, no containers
+## Fallback: build on the VPS by hand
 
-Only if you want zero containers. **You lose deploy-on-commit** — pushes do
-nothing until you run the script.
+Same server setup as the GitHub Actions route, but you build on the box and
+run the deploy yourself. **No auto-deploy** — pushes do nothing until you run
+the script. Useful if the VPS has no outbound access to GitHub Actions, or you
+want to deploy without pushing.
 
 Coolify's proxy already binds ports 80 and 443, so a second nginx there will
 not start. Host nginx listens on 8080 and Coolify's proxy forwards to it,

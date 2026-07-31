@@ -1,0 +1,68 @@
+name: Deploy docs site
+
+# Builds on GitHub's runners and ships only the static output to the VPS.
+# No container, no build tooling on the server — nginx just serves a folder.
+
+on:
+  push:
+    branches: [main]
+    # Only redeploy when something that affects the site changes.
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch: # lets you redeploy by hand from the Actions tab
+
+concurrency:
+  # A newer push supersedes an in-flight deploy rather than racing it.
+  group: deploy-docs
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        working-directory: website
+        run: npm ci
+
+      - name: Build site
+        working-directory: website
+        run: npm run build
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Pin the host key so a hijacked DNS record can't collect the deploy key.
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy to VPS
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+          WEB_ROOT: ${{ secrets.WEB_ROOT || '/var/www/scroll-input' }}
+        run: |
+          # Trailing slash on the source is required, or rsync nests a
+          # build/ directory inside the web root.
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT" \
+            website/build/ \
+            "$SSH_USER@$SSH_HOST:$WEB_ROOT/"
+
+      - name: Summary
+        run: echo "Deployed to https://scroll-input.jugaaadi.com" >> "$GITHUB_STEP_SUMMARY"
