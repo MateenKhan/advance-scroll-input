@@ -15,7 +15,21 @@ Builds on every commit and serves the output folder with nginx. You keep
 deploy-on-push, and production is nginx serving files — no Node runtime, no
 heavy application image.
 
-**New Resource → Public Repository** → `https://github.com/MateenKhan/advance-scroll-input`
+### Where to click (Coolify v4)
+
+Resources live inside projects, so there is no top-level "New Resource"
+button. From **Projects**:
+
+1. **`+ Add`** next to the *Projects* heading to create one (name it
+   `scroll-input`) — or **`+ Add Resource`** on an existing project card.
+2. Choose the environment, usually **production**.
+3. Resource type → **Public Repository**.
+4. Repository URL → `https://github.com/MateenKhan/advance-scroll-input`
+5. The build settings appear. Fill in the table below.
+
+> **Build Pack often defaults to Nixpacks.** Switch it to **Static**
+> explicitly, or Coolify auto-detects a Node app and tries to run a server
+> instead of serving the built files.
 
 | Setting | Value |
 | --- | --- |
