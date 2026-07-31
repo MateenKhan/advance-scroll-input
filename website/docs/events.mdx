@@ -1,0 +1,123 @@
+---
+id: events
+title: Events
+sidebar_position: 5
+---
+
+Around 40 handlers, available on all four components and on the `useScrubber` hook.
+
+**Composition guarantee:** the component attaches its own logic to the same DOM events you listen to, and always calls your handler *in addition to* its own. Passing `onKeyDown` does not break Enter/Escape; passing `onPointerDown` does not break scrubbing.
+
+## Value
+
+| Handler | Fires when |
+| --- | --- |
+| `onChange` | **Required.** Any change, shaped like a native input event. |
+| `onChangeMm` | *(DimensionInput)* **Required.** Any change, in millimetres. |
+| `onValueChange(value, source)` | Any change, parsed, with its cause. |
+| `onInput(rawText, e)` | Every keystroke, raw unparsed text. |
+| `onCommit(value, source)` | Finalised: blur, Enter, arrow, key, wheel, end of drag. |
+| `onCommitMm(mm, source)` | *(DimensionInput)* Same, in millimetres. |
+| `onParseError(rawText)` | Text couldn't be parsed. Value unchanged. |
+| `onUnitDetected(unit, rawText)` | User typed a unit — `10ft` fires `Unit.FEET`. |
+| `onClamp(clamped, requested, bound)` | Limited by `min`, `max`, or the zero floor. |
+| `onRevert(value)` | Rejected entry rolled back. |
+| `onDraftValidityChange(valid, error, text)` | Draft flipped valid ↔ invalid. Transitions only. |
+
+### `ChangeSource`
+
+`'type'` · `'scrub'` · `'arrow'` · `'key'` · `'wheel'` · `'blur'` · `'enter'` · `'external'`
+
+```tsx
+<DimensionInput
+  valueMm={widthMm}
+  onChangeMm={setWidthMm}
+  unit={unit}
+  onValueChange={(v, source) => {
+    if (source !== 'scrub') analytics.track('width_changed', { v, source });
+  }}
+  onCommit={(v) => undoStack.push(v)}
+  onUnitDetected={(u) => setUnit(u)}
+/>
+```
+
+:::info Typed units are resolved first
+With a field showing mm, typing `10ft` reports `3048`, not `10`. Value callbacks always speak the field's display unit.
+:::
+
+## Keyboard
+
+`onKeyDown` · `onKeyUp` · `onKeyPress` · `onEnter(value, e)` · `onEscape(e)` · `onArrowKey(dir, value, e)`
+
+`onKeyDown` runs **before** internal handling — `e.preventDefault()` suppresses the built-in Enter/Escape/arrow behaviour.
+
+## Focus
+
+`onFocus` · `onBlur` · `onSelect`
+
+## Mouse
+
+`onClick` · `onDoubleClick` · `onContextMenu` · `onMouseDown` · `onMouseUp` · `onMouseMove` · `onMouseEnter` · `onMouseLeave` · `onMouseOver` · `onMouseOut`
+
+Plus `onHoverChange(hovered, target)` where `target` is `'input' | 'roller' | 'arrow-up' | 'arrow-down'` — one handler instead of four enter/leave pairs.
+
+The drag gesture is built on **pointer** events, so mouse handlers never interfere with scrubbing.
+
+## Pointer & touch
+
+`onPointerDown` · `onPointerMove` · `onPointerUp` · `onPointerCancel` · `onPointerEnter` · `onPointerLeave`
+
+`onTouchStart` · `onTouchMove` · `onTouchEnd` · `onTouchCancel`
+
+The component calls `setPointerCapture` on drag start, so a drag keeps tracking even when the pointer leaves the element — including off-window.
+
+## Wheel
+
+`onWheel` — runs before internal handling. Wheel stepping is **off by default** so the control never eats page scroll; enable with `enableWheel`.
+
+## Scrub lifecycle
+
+| Handler | Fires |
+| --- | --- |
+| `onScrubStart(meta)` | A drag begins on the field, roller or an arrow. |
+| `onScrub(meta)` | Every animation frame while dragging and settling. |
+| `onScrubEnd(meta)` | The roller has settled into its detent. |
+| `onArrowClick(direction, value)` | An arrow was tapped, not dragged. |
+| `onDraggingChange(isDragging)` | Drag state flipped. |
+
+```ts
+interface ScrubEventMeta {
+  value: number;
+  startValue: number;
+  delta: number;
+  dy: number;          // negative = dragged up
+  velocity: number;
+  pointerType: string; // 'mouse' | 'touch' | 'pen'
+  target: ScrubTarget;
+}
+```
+
+`onScrub` fires per frame — keep it cheap, or gate expensive work with `onDraggingChange`.
+
+## Firing order
+
+**Typing `10ft` then Enter**
+
+```
+onFocus
+onInput("1") … onInput("10ft") → onUnitDetected(FEET)
+onKeyDown(Enter)
+  onChange / onValueChange(3048,'enter') / onCommit(3048,'enter')
+onEnter(3048)
+onBlur
+```
+
+**Dragging the roller down two detents**
+
+```
+onPointerDown → onScrubStart → onDraggingChange(true)
+onPointerMove ×N
+onScrub ×N → onChange / onValueChange(v,'scrub') per detent
+onPointerUp → onDraggingChange(false) → onCommit(v,'scrub')
+onScrub ×N (settle) → onScrubEnd({ delta: -2 })
+```

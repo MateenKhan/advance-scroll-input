@@ -1,0 +1,120 @@
+---
+id: intro
+title: Getting started
+sidebar_position: 1
+slug: /intro
+---
+
+import Demo from '@site/src/components/Demo';
+import { BasicDemo } from '@site/src/components/Demo/examples';
+
+A touch-friendly number input with a **vertical roller scrubber** and **unit-aware parsing**.
+
+Drag the field or the roller up and down to scrub. Tap an arrow to step. Click to type — and type it however you like: `10ft`, `100in`, `123mm`, `123"`, `5' 6"`, `1 1/2 in`. Values are stored canonically in millimetres, so switching display units never loses precision.
+
+<Demo
+  code={`import { DimensionInput, Unit } from '@jugaaadi/advance-scroll-input';
+import '@jugaaadi/advance-scroll-input/styles.css';
+
+const [widthMm, setWidthMm] = useState(304.8);
+
+<DimensionInput
+  valueMm={widthMm}
+  onChangeMm={setWidthMm}
+  unit={unit}
+/>`}
+  hint={<>Try dragging the roller, or typing <code>10ft</code>, <code>5' 6"</code>, <code>45cm</code>, then switching units.</>}
+>
+  {(variant) => <BasicDemo variant={variant} />}
+</Demo>
+
+:::tip Both builds, every demo
+Every demo on this site has a **CSS / Tailwind** switch in its toolbar. It re-renders the same example through the other published entry point, so you can see both builds behave identically before choosing one.
+:::
+
+## Install
+
+```bash
+npm install @jugaaadi/advance-scroll-input
+```
+
+`react` and `react-dom` (>= 17) are peer dependencies — the package doesn't bundle them.
+
+## CSS build (default)
+
+Works anywhere. Import the stylesheet once.
+
+```tsx
+import { DimensionInput, Unit } from '@jugaaadi/advance-scroll-input';
+import '@jugaaadi/advance-scroll-input/styles.css';
+
+function Panel() {
+  const [widthMm, setWidthMm] = useState(304.8);
+
+  return <DimensionInput valueMm={widthMm} onChangeMm={setWidthMm} unit={Unit.MM} />;
+}
+```
+
+## Tailwind build
+
+Same API, utility classes instead of a stylesheet — no CSS import.
+
+```tsx
+import { DimensionInputTw, Unit } from '@jugaaadi/advance-scroll-input/tailwind';
+```
+
+Add the package to your Tailwind `content` globs, or the classes get purged and it renders unstyled:
+
+```js
+content: [
+  './src/**/*.{ts,tsx}',
+  './node_modules/@jugaaadi/advance-scroll-input/dist/**/*.js',
+];
+```
+
+## Plain numbers, no units
+
+```tsx
+import { DraggableNumberInput } from '@jugaaadi/advance-scroll-input';
+
+<DraggableNumberInput
+  value={count}
+  onChange={(e) => setCount(parseFloat(e.target.value) || 0)}
+  max={99}
+  unit="pcs"
+/>;
+```
+
+## Accepted input
+
+| You type | Result |
+| --- | --- |
+| `123` | 123 × current unit |
+| `10ft` | 3048 mm |
+| `123"` | 3124.2 mm |
+| `5' 6"` | 1676.4 mm |
+| `1 1/2 in` | 38.1 mm |
+| `3/4"` | 19.05 mm |
+| `45 cm` | 450 mm |
+| `2 feet` | 3048 mm |
+| `96px` | 25.4 mm (96 DPI) |
+| `12,5cm` | 125 mm |
+
+Units: `mm`, `cm`, `dm`, `m`, `in`, `ft`, `px`.
+
+## Interaction
+
+| Gesture | Result |
+| --- | --- |
+| Drag the field or roller | Scrub; one detent = one `step` |
+| Tap an arrow | Step — up lights **green**, down **orange** |
+| Tap the field | Focus, caret at the end |
+| `ArrowUp` / `ArrowDown` | Step (`Shift` ×10, `Alt` ×0.1) |
+| `Enter` / `Escape` | Commit / revert |
+| Wheel | Step — opt in with `enableWheel` |
+
+While scrubbing, the rim, glow, knurling and active arrow all take the direction's colour — green up, orange down — so you can tell which way a value is moving without reading it.
+
+## Touch
+
+Built touch-first: `touch-action: none` so a vertical drag scrubs instead of scrolling the page, pointer capture so the drag survives your finger leaving the element, 44px targets and 16px text on coarse pointers (below 16px iOS Safari zooms on focus).

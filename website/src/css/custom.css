@@ -1,0 +1,176 @@
+/* Tailwind utilities only — no preflight, see tailwind.config.js */
+@tailwind components;
+@tailwind utilities;
+
+/* The library's own stylesheet, imported exactly as a consumer would. */
+@import '@jugaaadi/advance-scroll-input/styles.css';
+
+:root {
+  --ifm-color-primary: #0e7490;
+  --ifm-color-primary-dark: #0c657d;
+  --ifm-color-primary-darker: #0b5f76;
+  --ifm-color-primary-darkest: #094e61;
+  --ifm-color-primary-light: #10839f;
+  --ifm-color-primary-lighter: #1189a6;
+  --ifm-color-primary-lightest: #139abb;
+  --ifm-code-font-size: 95%;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #22d3ee;
+  --ifm-color-primary-dark: #0dc5e2;
+  --ifm-color-primary-darker: #0cb9d5;
+  --ifm-color-primary-darkest: #0a98af;
+  --ifm-color-primary-light: #3bd9f1;
+  --ifm-color-primary-lighter: #48dbf2;
+  --ifm-color-primary-lightest: #6de3f5;
+}
+
+/* ------------------------------------------------------- demo container */
+
+.demo-card {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.demo-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-color-emphasis-100);
+}
+
+.demo-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-right: auto;
+}
+
+.demo-tab {
+  border: none;
+  background: transparent;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.demo-tab:hover {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.demo-tab[aria-selected='true'] {
+  background: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.demo-variant {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.demo-variant button {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: transparent;
+  color: inherit;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.demo-variant button[aria-pressed='true'] {
+  border-color: var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+  font-weight: 600;
+}
+
+/* Stopgap for v0.0.1 only — remove once the site installs >= 0.0.2.
+   Tailwind's preflight is disabled here (see tailwind.config.js), so the
+   Tailwind build's input falls back to the browser's default font instead of
+   inheriting from its wrapper, which misaligns the formula overlay. 0.0.2 sets
+   the font on the input directly. Scoped away from the CSS build, which sets
+   its own font and must not be touched. */
+.demo-stage input:not(.sc-input) {
+  font-size: inherit;
+  font-family: inherit;
+}
+
+/* Demos sit on a dark stage because the component's default theme is dark —
+   showing it on a light card would misrepresent the out-of-the-box look. */
+.demo-stage {
+  padding: 1.75rem 1.25rem;
+  background: #0b1120;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.demo-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 130px) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .demo-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}
+
+.demo-row label {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+.demo-readout {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  color: #22d3ee;
+  border-top: 1px dashed #1e293b;
+  padding-top: 0.75rem;
+}
+
+.demo-hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.7;
+}
+
+.demo-hint code {
+  background: #1e293b;
+  border: none;
+  color: #22d3ee;
+}
+
+.demo-card pre {
+  margin: 0;
+  border-radius: 0;
+}
+
+/* ------------------------------------------------------------- landing */
+
+.hero-banner {
+  padding: 4rem 1rem 3rem;
+  text-align: center;
+  background: linear-gradient(180deg, #0b1120 0%, #111c33 100%);
+  color: #e2e8f0;
+}
+
+.hero-demo {
+  max-width: 520px;
+  margin: 2rem auto 0;
+  text-align: left;
+}

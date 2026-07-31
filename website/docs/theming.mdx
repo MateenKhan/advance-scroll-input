@@ -1,0 +1,120 @@
+---
+id: theming
+title: Theming
+sidebar_position: 4
+---
+
+import Demo from '@site/src/components/Demo';
+import { ThemingDemo } from '@site/src/components/Demo/examples';
+
+Every colour, size, weight, opacity, cursor and timing in the CSS build is a custom property — **106 of them**. You should never need to override a selector.
+
+<Demo
+  showVariantToggle={false}
+  code={`<DimensionInput
+  valueMm={v}
+  onChangeMm={setV}
+  unit={Unit.MM}
+  style={{
+    '--sc-bg': '#1a1030',
+    '--sc-border': '#4c1d95',
+    '--sc-accent': '#a78bfa',
+    '--sc-text': '#ede9fe',
+    '--sc-radius': '9px',
+    '--sc-roller-idle': '#a78bfa',
+    '--sc-roller-grad-from': '#c4b5fd',
+    '--sc-roller-grad-to': '#7c3aed',
+    '--sc-roller-face': '#f5f3ff',
+  } as React.CSSProperties}
+/>`}
+  hint={<>Both fields are the same component — only custom properties differ.</>}
+>
+  {(variant) => <ThemingDemo variant={variant} />}
+</Demo>
+
+Set tokens on `:root`, on a wrapper, or per instance:
+
+```css
+.my-panel {
+  --sc-bg: #0b1020;
+  --sc-accent: #a78bfa;
+  --sc-height: 2.25rem;
+}
+```
+
+## Layout & type
+
+| Token | Default |
+| --- | --- |
+| `--sc-height` | `2rem` |
+| `--sc-radius` | `4px` |
+| `--sc-gap` | `0.375rem` |
+| `--sc-padding-x` | `0.5rem` |
+| `--sc-roller-width` | `1.75rem` |
+| `--sc-font-size` | `0.875rem` |
+| `--sc-font-family` | `inherit` |
+| `--sc-font-weight` / `-dragging` | `400` / `700` |
+
+## Surface, border, text
+
+Each has idle / hover / focus / dragging / disabled variants, so any state can be styled independently.
+
+| Token | Default |
+| --- | --- |
+| `--sc-bg` | `#020617` |
+| `--sc-bg-hover` / `-focus` / `-dragging` / `-disabled` | inherit `--sc-bg` |
+| `--sc-border` | `#334155` |
+| `--sc-border-hover` | `#475569` |
+| `--sc-border-focus` / `-dragging` | `--sc-accent` |
+| `--sc-text` | `#e2e8f0` |
+| `--sc-text-dragging` | `#ffffff` |
+| `--sc-placeholder` | `#64748b` |
+| `--sc-selection-bg` / `-text` | `#0e7490` / `#fff` |
+| `--sc-caret` | `--sc-accent` |
+
+## Roller
+
+| Token | Default |
+| --- | --- |
+| `--sc-roller-idle` | `#0ea5e9` |
+| `--sc-roller-active` | `#22d3ee` |
+| `--sc-roller-face` / `-active` | `#f8fafc` / `#fff` |
+| `--sc-roller-grad-from` / `-to` | `#22d3ee` / `#3b82f6` |
+| `--sc-roller-grad-from-up` / `-to-up` | `#4ade80` / `#16a34a` |
+| `--sc-roller-grad-from-down` / `-to-down` | `#fb923c` / `#ea580c` |
+| `--sc-roller-glow` / `-up` / `-down` | `#22d3ee` / `#22c55e` / `#f97316` |
+| `--sc-roller-opacity` + hover/focus/dragging | `0.8` … |
+
+## Knurling & arrows
+
+| Token | Default |
+| --- | --- |
+| `--sc-line-1` / `-2` / `-3` | jewel tones, at rest |
+| `--sc-line-up-1` / `-2` / `-3` | greens, travelling up |
+| `--sc-line-down-1` / `-2` / `-3` | oranges, travelling down |
+| `--sc-arrow-up-active` | `#22c55e` |
+| `--sc-arrow-down-active` | `#f97316` |
+
+## Validity & formula colours
+
+| Token | Default |
+| --- | --- |
+| `--sc-valid` / `--sc-invalid` | `#22c55e` / `#ef4444` |
+| `--sc-tok-number` `-unit` `-func` `-ident` | syntax colours |
+| `--sc-tok-arith` `-relational` `-logical` `-ternary` | operator families |
+| `--sc-paren-0` … `--sc-paren-3` | rainbow parens by depth |
+| `--sc-revert-color` / `-hover` | revert button |
+
+## Light preset
+
+```tsx
+<DimensionInput className="sc-root--light" ... />
+```
+
+## Touch breakpoints
+
+The coarse-pointer and narrow-container overrides are themeable too: `--sc-height-coarse`, `--sc-roller-width-coarse`, `--sc-font-size-coarse`, `--sc-gap-coarse`, `--sc-roller-scale-coarse`, `--sc-gap-narrow`, `--sc-roller-width-narrow`.
+
+:::note SVG colours
+Tokens reach the roller SVG through `style`, not presentation attributes — `fill="var(--x)"` is not resolved by browsers, so the component never uses that form. Worth knowing if you fork it.
+:::

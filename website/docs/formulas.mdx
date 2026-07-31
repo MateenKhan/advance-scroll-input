@@ -1,0 +1,124 @@
+---
+id: formulas
+title: Formulas
+sidebar_position: 2
+---
+
+import Demo from '@site/src/components/Demo';
+import { FormulaDemo } from '@site/src/components/Demo/examples';
+
+Every input accepts arithmetic, not just numbers. Click a field showing `100`, type `*2`, click away — it's `200`. Click back in and it shows `100*2` again, so you edit the formula rather than reverse-engineer it.
+
+<Demo
+  code={`<DimensionInput
+  valueMm={valueMm}
+  onChangeMm={setValueMm}
+  unit={Unit.MM}
+  variables={{ qty: 4 }}                      // unitless scalars
+  variablesMm={{ length: 1000, width: 600 }}  // dimensions, in mm
+/>`}
+  hint={
+    <>
+      Try <code>(190*120)/144</code>, <code>length/2</code>, <code>width*qty</code>,{' '}
+      <code>max(length,width)</code>, <code>1m+500mm</code>,{' '}
+      <code>length&gt;500?100:50</code>. Then try <code>100 *asdf</code> and click away — the
+      text stays, the border turns red, and a revert button appears.
+    </>
+  }
+>
+  {(variant) => <FormulaDemo variant={variant} />}
+</Demo>
+
+## No `eval()`
+
+The engine is a hand-written tokenizer → Pratt parser → evaluator. Nothing is executed as JavaScript, so an input box can never run code. It also means the parser hands back tokens for syntax highlighting and reports *where* an error is — neither of which `eval()` can do.
+
+Precedence is real precedence, not left-to-right: `1+2*3` is `7`, `(1+2)*3` is `9`.
+
+## Operators
+
+Loosest-binding first.
+
+| Precedence | Operators |
+| --- | --- |
+| 1 | `\|\|` |
+| 2 | `&&` |
+| 5 | `==` `!=` `===` `!==` |
+| 6 | `<` `<=` `>` `>=` |
+| 8 | `+` `-` |
+| 9 | `*` `/` `%` |
+| 10 | unary `-` `+` `!` |
+
+Comparisons yield `1` or `0`, so they compose with arithmetic: `(a>b)*100`.
+
+## Deliberately unsupported
+
+This input is for designers, carpenters and CAD operators — not programmers. Operators whose behaviour only a software engineer would predict are **rejected outright** and highlighted red, because a plausible-but-wrong number is far more dangerous than a visible error: someone will trust a bad dimension and cut material to it.
+
+| Not supported | Why |
+| --- | --- |
+| `&` `\|` `~` `<<` `>>` | Bitwise. Nobody outside programming reads `5&3` as `1`. |
+| `^` `**` | Exponent. Nobody types `2^3` expecting `8`. |
+
+Powers are available spelled out, so they read as what they do:
+
+```
+pow(2, 10)  ->  1024
+sqrt(81)    ->  9
+```
+
+`&&` and `||` remain — those are logical, not bitwise.
+
+## Functions
+
+| Function | Arity |
+| --- | --- |
+| `abs` `sign` `sqrt` `cbrt` | 1 |
+| `floor` `ceil` `trunc` | 1 |
+| `round(x)` / `round(x, decimals)` | 1–2 |
+| `min(...)` `max(...)` `hypot(...)` | 1+ |
+| `clamp(x, lo, hi)` | 3 |
+| `pow(a,b)` `atan2(y,x)` | 2 |
+| `log` `log10` `log2` `exp` | 1 |
+| `sin` `cos` `tan` `asin` `acos` `atan` | 1 |
+
+Wrong arity is an error, not a silent `NaN`. Constants: `pi`, `tau`, `e`. Set `angleMode="deg"` for degrees.
+
+## Variables
+
+| Prop | Meaning |
+| --- | --- |
+| `variables` | Unitless scalars — counts, multipliers. Used as given. |
+| `variablesMm` | Dimensions in millimetres. Converted into the field's display unit. |
+
+With the field in **mm**, `length` is `1000`. Switch to **cm** and it's `100` — the formula keeps meaning the same physical size. Unknown names error and get a red wavy underline as you type.
+
+## Dimension shorthand still wins
+
+`3/4"` is three-quarters of an inch, not a division. Text that is purely dimension shorthand routes to the dimension parser and keeps its historical meaning. Compound parts join on **whitespace only** (`5' 6"`, `1 1/2 in`) — a sign between parts is arithmetic, so `158-9` is `149`.
+
+## Editing behaviour
+
+- **Focus shows the formula, blur shows the value.**
+- **Caret lands at the end**, so typing `*2` just works. Pass `selectOnFocus` for select-all.
+- **Live validity:** green tick when the draft evaluates, red no-entry when it doesn't, plus a matching border. Control with `feedback` (`both` / `icon` / `border` / `none`).
+- **Rejected entries are never thrown away.** The text stays, the border goes red, and a revert button restores the last good value. Hide it with `showRevert={false}`.
+
+## Using the engine standalone
+
+It has no React dependency.
+
+```ts
+import { evaluateExpression, Unit } from '@jugaaadi/advance-scroll-input';
+
+evaluateExpression('(190*120)/144');
+// { ok: true, value: 158.333…, tokens: [...] }
+
+evaluateExpression('100 * length', { variablesMm: { length: 1000 }, displayUnit: Unit.CM });
+// { ok: true, value: 10000 }
+
+evaluateExpression('100 * nope');
+// { ok: false, error: 'Unknown variable "nope"', errorStart: 6, errorEnd: 10 }
+```
+
+`evaluateExpression` never throws — failures come back as `{ ok: false, error }` with the source range where known.

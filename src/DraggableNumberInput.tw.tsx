@@ -99,7 +99,10 @@ export const DraggableNumberInputTw = forwardRef<ScrollComponentHandle, Draggabl
         style={style}
         data-feature-id={props['data-feature-id']}
       >
-        {/* Font lives here so the highlight overlay shares the input's metrics. */}
+        {/* Font is set here for the overlay to inherit, and repeated on the
+            input itself — relying on inheritance breaks when a consumer
+            disables Tailwind's preflight, since the browser's default input
+            font then wins and the overlay drifts out of alignment. */}
         <div
           ref={fieldRef}
           className={`relative flex-1 min-w-0 flex items-center text-sm max-sm:text-base ${
@@ -140,7 +143,7 @@ export const DraggableNumberInputTw = forwardRef<ScrollComponentHandle, Draggabl
             data-testid={props['data-testid']}
             className={`${
               resizeValue && resizeValue !== 'horizontal' ? 'h-full' : 'h-8 max-sm:h-11'
-            } bg-slate-950 border rounded px-2 outline-none transition-all duration-150 touch-none disabled:opacity-50 disabled:cursor-not-allowed ${borderClass} ${
+            } text-sm max-sm:text-base bg-slate-950 border rounded px-2 outline-none transition-all duration-150 touch-none disabled:opacity-50 disabled:cursor-not-allowed ${borderClass} ${
               state.isDragging ? 'font-bold text-white tracking-wide shadow-inner' : 'text-slate-200'
             } ${showOverlay ? 'text-transparent bg-transparent caret-cyan-400' : ''} ${
               invalid || valid ? 'pr-7' : ''

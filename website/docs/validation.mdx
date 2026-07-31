@@ -1,0 +1,85 @@
+---
+id: validation
+title: Validation
+sidebar_position: 3
+---
+
+import Demo from '@site/src/components/Demo';
+import { ValidationDemo } from '@site/src/components/Demo/examples';
+
+Validation runs on the **result**, so it behaves identically whether the number was typed, computed from a formula, scrubbed or stepped. It also runs on the live draft, so the indicator you see while typing is exactly what commit will do.
+
+<Demo
+  code={`{/* positive-only by default, capped at 9,999,999 */}
+<DimensionInput valueMm={posMm} onChangeMm={setPosMm} unit={Unit.MM} />
+
+{/* opt in to negatives */}
+<DimensionInput valueMm={offsetMm} onChangeMm={setOffsetMm} unit={Unit.MM} allowNegative />
+
+{/* whole numbers only, hard ceiling */}
+<DraggableNumberInput
+  value={count}
+  onChange={(e) => setCount(parseFloat(e.target.value) || 0)}
+  max={99}
+  integerOnly
+  unit="pcs"
+/>`}
+  hint={
+    <>
+      Type <code>-5</code> into the first two and compare. Try <code>2.5</code> and{' '}
+      <code>500</code> in the last one.
+    </>
+  }
+>
+  {(variant) => <ValidationDemo variant={variant} />}
+</Demo>
+
+## Defaults are CAD-friendly
+
+| Prop | Default | Effect |
+| --- | --- | --- |
+| `min` | `0` | Positive-only unless `allowNegative` |
+| `max` | `9999999` | Sane ceiling for dimensions |
+| `allowNegative` | `false` | Permit values below zero |
+| `integerOnly` | `false` | Reject fractional results |
+| `validate` | — | `(value) => true \| string` |
+
+## Negatives
+
+The value is floored at `0` however it arrives — typed, pasted, scrubbed, arrow-tapped or keyboard-nudged. Attempts to go lower clamp and fire `onClamp`.
+
+`min` interacts deliberately: while `allowNegative` is `false`, a negative `min` is ignored and treated as `0`, so the flag is the single switch governing sign.
+
+| Config | Effective floor |
+| --- | --- |
+| *(nothing)* | `0` |
+| `min={10}` | `10` |
+| `min={-50}` | `0` — negative `min` ignored |
+| `allowNegative` | unbounded below |
+| `allowNegative min={-50}` | `-50` |
+
+## Custom rules
+
+Return `true` to accept, or a message to reject. The message shows on the revert button's tooltip.
+
+```tsx
+<DimensionInput
+  valueMm={v}
+  onChangeMm={setV}
+  unit={unit}
+  integerOnly
+  validate={(n) => (n % 5 === 0 ? true : 'Must be a multiple of 5')}
+/>
+```
+
+## Rejected entries
+
+A rejected value is never silently discarded. The text you typed stays on screen, the border turns red, and a small revert button restores the last good number — or call `ref.current.revert()`.
+
+```tsx
+const ref = useRef<ScrollComponentHandle>(null);
+
+ref.current?.revert();
+ref.current?.stepUp();
+ref.current?.focus();
+```
