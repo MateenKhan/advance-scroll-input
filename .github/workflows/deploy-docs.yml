@@ -55,13 +55,19 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-          WEB_ROOT: ${{ secrets.WEB_ROOT || '/var/www/scroll-input' }}
+          # nginx derives the web root from the hostname, so the folder is
+          # named after the domain and no server config changes per site.
+          SITE_DOMAIN: scroll-input.jugaaadi.com
         run: |
+          SSH="ssh -i ~/.ssh/deploy_key -p $SSH_PORT"
+          WEB_ROOT="/var/www/sites/$SITE_DOMAIN"
+
+          # First deploy of a new site creates its folder; rsync won't.
+          $SSH "$SSH_USER@$SSH_HOST" "mkdir -p '$WEB_ROOT'"
+
           # Trailing slash on the source is required, or rsync nests a
           # build/ directory inside the web root.
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT" \
-            website/build/ \
+          rsync -az --delete -e "$SSH" website/build/ \
             "$SSH_USER@$SSH_HOST:$WEB_ROOT/"
 
       - name: Summary
