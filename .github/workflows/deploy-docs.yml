@@ -42,33 +42,50 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
         run: |
           mkdir -p ~/.ssh
+
+          # Secrets pasted through a browser routinely pick up a trailing
+          # newline or space. ssh then dies with "hostname contains invalid
+          # characters", which points nowhere near the real cause.
+          HOST="$(printf '%s' "$SSH_HOST" | tr -d '[:space:]')"
+          USER_="$(printf '%s' "$SSH_USER" | tr -d '[:space:]')"
+          PORT="$(printf '%s' "$SSH_PORT" | tr -d '[:space:]')"
+          {
+            echo "SSH_HOST_CLEAN=$HOST"
+            echo "SSH_USER_CLEAN=$USER_"
+            echo "SSH_PORT_CLEAN=$PORT"
+          } >> "$GITHUB_ENV"
+
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+
           # Pin the host key so a hijacked DNS record can't collect the deploy key.
-          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::Could not reach $HOST:$PORT — check the SSH_HOST secret and the firewall."
+            exit 1
+          fi
 
       - name: Deploy to VPS
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
           # nginx derives the web root from the hostname, so the folder is
           # named after the domain and no server config changes per site.
           SITE_DOMAIN: scroll-input.jugaaadi.com
         run: |
-          SSH="ssh -i ~/.ssh/deploy_key -p $SSH_PORT"
+          SSH="ssh -i ~/.ssh/deploy_key -p $SSH_PORT_CLEAN"
+          TARGET="$SSH_USER_CLEAN@$SSH_HOST_CLEAN"
           WEB_ROOT="/var/www/sites/$SITE_DOMAIN"
 
           # First deploy of a new site creates its folder; rsync won't.
-          $SSH "$SSH_USER@$SSH_HOST" "mkdir -p '$WEB_ROOT'"
+          $SSH "$TARGET" "mkdir -p '$WEB_ROOT'"
 
           # Trailing slash on the source is required, or rsync nests a
           # build/ directory inside the web root.
-          rsync -az --delete -e "$SSH" website/build/ \
-            "$SSH_USER@$SSH_HOST:$WEB_ROOT/"
+          rsync -az --delete -e "$SSH" website/build/ "$TARGET:$WEB_ROOT/"
 
       - name: Summary
         run: echo "Deployed to https://scroll-input.jugaaadi.com" >> "$GITHUB_STEP_SUMMARY"
