@@ -214,9 +214,36 @@ export function useScrubber(options: UseScrubberOptions) {
     [effectiveMin, max],
   );
 
+  /**
+   * The value the field is holding RIGHT NOW, readable from inside `emitChange`
+   * without putting it in the dependency list (which would rebuild the callback
+   * on every frame of a drag).
+   */
+  const valueRef = useRef(safeValue);
+  valueRef.current = safeValue;
+
   const emitChange = useCallback(
     (newVal: number, source: ChangeSource, forceInteger = false) => {
       const clamped = clamp(newVal);
+      /*
+       * ---------------------------------------------------------------------
+       * A GESTURE THAT LANDED ON THE VALUE YOU ALREADY HAVE EMITS NOTHING.
+       * ---------------------------------------------------------------------
+       *
+       * `beginDrag` runs on POINTER-DOWN and starts the rAF loop, which fires
+       * its first frame ~16ms later — sooner than any human releases a click.
+       * That frame computes `startValue + Math.round(0 / pixelsPerTick) * step`,
+       * which is the start value exactly, and then emitted it. Whatever the
+       * formatting below did to that number — round it, fix it to three
+       * decimals — became a WRITE to the consumer's model, from a click that
+       * moved nothing.
+       *
+       * The guard is an identity test rather than a tolerance: it fires only
+       * when the arithmetic produced the same double the field already holds,
+       * which is precisely the no-op case. A real detent differs by `step` and
+       * falls straight through.
+       */
+      if (clamped === valueRef.current) return;
       let strVal: string;
       if (forceInteger) {
         strVal = String(Math.round(clamped));
@@ -299,7 +326,32 @@ export function useScrubber(options: UseScrubberOptions) {
     (overrides: Partial<ScrubEventMeta> = {}): ScrubEventMeta => {
       const p = physicsRef.current;
       const d = dragState.current;
-      const current = Math.round(p.startValue) + Math.round(p.phase / pixelsPerTick) * step;
+      /*
+       * `p.startValue` IS NOT AN INTEGER, AND ROUNDING IT CORRUPTS THE VALUE.
+       *
+       * It is the value in DISPLAY units — a consumer hands this component
+       * whatever its own unit shows — so `Math.round` here is only harmless when
+       * one display unit happens to equal one `step`. That is true in
+       * millimetres, which is why this survived: the default unit hides it
+       * completely.
+       *
+       * In every other unit it silently rewrites the number on a plain CLICK,
+       * because `beginDrag` runs on pointer-down and the first animation frame
+       * lands ~16ms later — sooner than any human releases. Measured worst case
+       * for a single click, in a millimetre-modelled app:
+       *
+       *     cm  +/- 5mm      in  +/- 12.7mm      ft  +/- 152mm      m  +/- 500mm
+       *
+       * 2100 shown as `2.1 m` rounds to `2` and commits 2000. A different
+       * wardrobe and a different price, from a click, leaving a plausible number
+       * on screen.
+       *
+       * `startValue` is already quantised to the detent grid where it is written
+       * (`startVal - Math.round(currentPhase / pixelsPerTick) * step` below), so
+       * it needs no rounding here at all — the phase term is the only part that
+       * should snap.
+       */
+      const current = p.startValue + Math.round(p.phase / pixelsPerTick) * step;
       return {
         value: current,
         startValue: d?.startValue ?? p.startValue,
@@ -361,8 +413,32 @@ export function useScrubber(options: UseScrubberOptions) {
         }
 
         // Value follows the visual phase exactly: one detent = one `step`.
-        const newValue = Math.round(p.startValue) + Math.round(p.phase / pixelsPerTick) * step;
-        emitChange(newValue, 'scrub', step === 1);
+        /* Same correction as the scrub path above — see the note there. */
+        const newValue = p.startValue + Math.round(p.phase / pixelsPerTick) * step;
+        /*
+         * -------------------------------------------------------------------
+         * `step === 1` DOES NOT MEAN THE VALUE IS AN INTEGER.
+         * -------------------------------------------------------------------
+         *
+         * This argument used to be `step === 1`, and it rounded the emitted
+         * value to a whole number whenever the caller's step happened to be one.
+         * A step of 1 says how far ONE DETENT travels. It says nothing at all
+         * about where the value currently sits, and a consumer whose model is
+         * millimetres passes `step: 1` for its millimetre field while holding
+         * derived values like 1367.0929, 824.6 and 490.8.
+         *
+         * So a plain CLICK — which starts the rAF loop and emits the start value
+         * before anybody lets go — silently rewrote 1367.0929 to 1367, and a
+         * single detent turned 1367.1 into 1368 rather than 1368.1. Up to half a
+         * millimetre per click, in the one unit everybody assumed was safe.
+         * (The other units escaped because their step is below 1, so this branch
+         * was never taken there — which is exactly why it went unseen.)
+         *
+         * `integerOnly` is the option that actually means "this value is a whole
+         * number" — it is the flag `resolve` already refuses fractions under —
+         * so that is what decides it.
+         */
+        emitChange(newValue, 'scrub', integerOnly);
 
         setVisualPhase(p.phase);
         handlers.current.onScrub?.(buildMeta({ value: newValue }));
@@ -378,7 +454,7 @@ export function useScrubber(options: UseScrubberOptions) {
       if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
       animationRef.current = requestAnimationFrame(loop);
     },
-    [emitChange, buildMeta, pixelsPerTick, step],
+    [emitChange, buildMeta, pixelsPerTick, step, integerOnly],
   );
 
   const beginDrag = useCallback(
