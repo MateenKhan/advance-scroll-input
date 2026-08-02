@@ -2,7 +2,23 @@
  * Engine test suite. Run with `npm test` (builds first, then exercises the
  * packaged output — the same artefact consumers get).
  */
-import { evaluateExpression, isFormula, isPlainDimension, Unit, tokenize, matchingParens } from '../dist/index.js';
+import { readFileSync } from 'node:fs';
+import {
+  evaluateExpression,
+  isFormula,
+  isPlainDimension,
+  Unit,
+  tokenize,
+  matchingParens,
+  ROLLER_VIEWBOX,
+  ROLLER_BODY,
+  ROLLER_BODY_STROKE,
+  ROLLER_HIT,
+  rollerArrowExtent,
+  rollerPaintedExtent,
+  rollerFit,
+  rollerArrowTapTarget,
+} from '../dist/index.js';
 
 let pass = 0;
 const failures = [];
@@ -207,6 +223,244 @@ ok(
 
 // A stray bitwise character tokenizes as an error, so it highlights red.
 ok('stray & is an error token', tokenize('5&3').some((t) => t.type === 'error'));
+
+/* ==================================================================
+ * ROLLER GEOMETRY — the graphic stays inside the box it was given
+ * ==================================================================
+ *
+ * The defect this section is the receipt for, reported by a consumer stacking
+ * two fields in adjacent rows: **the lower field's up-arrow painted on top of
+ * the upper field's down-arrow.**
+ *
+ * Three separate escape routes, all of them silent:
+ *
+ *   1. `<svg width="24" height="32">` is an intrinsic 32 CSS px whatever the
+ *      container measures, while `.sc-roller` was `height: var(--sc-height)`.
+ *      At `--sc-height: 1.35rem` that is a 32px drawing in a 21.6px box —
+ *      5.2px of bleed at the top and the bottom, at rest, always.
+ *   2. `overflow: visible` let it out.
+ *   3. the hovered arrow's `scale(1.15) translateY(±1.5px)` plus a 1.5-unit
+ *      stroke reached y = -2.96 and y = 34.96, outside a 0…32 viewBox even at
+ *      full size; the drag glow's `r = 14` reached x = -2 and x = 26.
+ *
+ * So the assertions below are: (a) nothing is painted outside the viewBox in
+ * ANY state, (b) the fitted graphic never exceeds the roller's box over a swept
+ * range of box sizes, and (c) the arrow tap target survives at coarse-pointer
+ * sizes — because the fix removed the `scale(1.15)` that used to grow it.
+ *
+ * Every number is recomputed from `rollerGeometry`, which is the same module
+ * `RollerIcon` draws from, so a changed path moves the assertion with it.
+ */
+
+const VB = ROLLER_VIEWBOX;
+const inside = (box, eps = 1e-9) =>
+  box.minX >= VB.x - eps &&
+  box.minY >= VB.y - eps &&
+  box.maxX <= VB.x + VB.width + eps &&
+  box.maxY <= VB.y + VB.height + eps;
+const show = (b) =>
+  `x ${b.minX.toFixed(3)}…${b.maxX.toFixed(3)}, y ${b.minY.toFixed(3)}…${b.maxY.toFixed(3)}`;
+
+/* --- (a) every state's painted extent is inside the viewBox --- */
+
+for (const showArrows of [true, false]) {
+  const box = rollerPaintedExtent({ showArrows });
+  ok(
+    `painted extent inside viewBox (arrows: ${showArrows})`,
+    inside(box),
+    `-> ${show(box)} vs viewBox 0,0 ${VB.width}x${VB.height}`,
+  );
+}
+
+for (const direction of ['up', 'down']) {
+  for (const hot of [false, true]) {
+    const box = rollerArrowExtent(direction, hot);
+    ok(`${direction} arrow ${hot ? 'hot' : 'rest'} inside viewBox`, inside(box), `-> ${show(box)}`);
+  }
+}
+
+/* The hot arrow must also clear the pill it sits beside, or the "pop" lands on
+   the rim. The pill's stroke is centred on its edge, so half of it bleeds. */
+const pillTop = ROLLER_BODY.y - ROLLER_BODY_STROKE / 2;
+const pillBottom = ROLLER_BODY.y + ROLLER_BODY.height + ROLLER_BODY_STROKE / 2;
+ok(
+  'hot up arrow clears the pill',
+  rollerArrowExtent('up', true).maxY <= pillTop,
+  `-> ${rollerArrowExtent('up', true).maxY.toFixed(3)} vs pill top ${pillTop}`,
+);
+ok(
+  'hot down arrow clears the pill',
+  rollerArrowExtent('down', true).minY >= pillBottom,
+  `-> ${rollerArrowExtent('down', true).minY.toFixed(3)} vs pill bottom ${pillBottom}`,
+);
+
+/* Symmetry: the two arrows are mirrors, so a change to one that misses the
+   other shows up here rather than on screen. */
+{
+  const up = rollerArrowExtent('up', true);
+  const down = rollerArrowExtent('down', true);
+  ok(
+    'arrows are mirror images',
+    approx(up.minY, VB.height - down.maxY) && approx(up.maxY, VB.height - down.minY),
+    `-> up ${show(up)}, down ${show(down)}`,
+  );
+}
+
+/* --- (b) the fitted graphic never exceeds the roller's box --- *
+ *
+ * Swept, not spot-checked: `--sc-height` is a consumer token and the reported
+ * bug happened at a value nobody had tried. 1.35rem (21.6px) is the value that
+ * produced the screenshot; 2rem is the package default; 2.75rem is the
+ * coarse-pointer default. Every whole pixel from 8 to 80 is swept for both the
+ * box's width and its height, which covers all of them.
+ */
+let fitAssertions = 0;
+const escapes = [];
+const paintedBox = rollerPaintedExtent();
+for (let h = 8; h <= 80; h += 1) {
+  for (let w = 8; w <= 80; w += 1) {
+    fitAssertions += 1;
+    const fit = rollerFit(w, h);
+    if (fit.widthPx > w + 1e-9 || fit.heightPx > h + 1e-9) {
+      escapes.push(`box ${w}x${h} -> graphic ${fit.widthPx.toFixed(2)}x${fit.heightPx.toFixed(2)}`);
+    }
+    // The whole point: the drawing's own extent, scaled, is inside the box.
+    const paintedH = (paintedBox.maxY - paintedBox.minY) * fit.scale;
+    const paintedW = (paintedBox.maxX - paintedBox.minX) * fit.scale;
+    if (paintedH > h + 1e-9 || paintedW > w + 1e-9) {
+      escapes.push(`box ${w}x${h} -> painted ${paintedW.toFixed(2)}x${paintedH.toFixed(2)}`);
+    }
+  }
+}
+ok(
+  `graphic fits its box at all ${fitAssertions} swept box sizes`,
+  escapes.length === 0,
+  `-> ${escapes.length} escapes, first: ${escapes[0] ?? '(none)'}`,
+);
+ok('the fit sweep was not empty', fitAssertions === 73 * 73, `-> ${fitAssertions}`);
+
+/* The three real token values, named, so a regression reads as itself. */
+for (const [label, px] of [
+  ['1.35rem — the value in the bug report', 21.6],
+  ['2rem — the package default', 32],
+  ['2.75rem — the coarse-pointer default', 44],
+]) {
+  const fit = rollerFit(px, px);
+  ok(
+    `graphic is contained at ${label}`,
+    fit.heightPx <= px + 1e-9 && fit.widthPx <= px + 1e-9,
+    `-> ${fit.widthPx.toFixed(2)}x${fit.heightPx.toFixed(2)} in ${px}px`,
+  );
+}
+
+/* At the 2rem default the drawing is exactly the size it has always been —
+   24 x 32 px — so this change costs no existing consumer a pixel. */
+{
+  const fit = rollerFit(28, 32); // --sc-roller-width 1.75rem, --sc-height 2rem
+  ok(
+    'default consumer renders the same 24x32 graphic as before',
+    approx(fit.widthPx, 24) && approx(fit.heightPx, 32),
+    `-> ${fit.widthPx}x${fit.heightPx}`,
+  );
+}
+
+/* --- (c) the coarse-pointer tap target survives --- *
+ *
+ * The old `@media (pointer: coarse)` grew the arrows with
+ * `transform: scale(1.15)` ON THE SVG, i.e. it bought the tap target with the
+ * escape this whole section forbids. The box grows instead, so the target must
+ * come out at least as large as it used to be.
+ */
+{
+  const oldScale = 1.15; // the removed --sc-roller-scale-coarse
+  const oldTargetH = ROLLER_HIT.height * oldScale; // 32-unit svg, 1px per unit
+  const oldTargetW = VB.width * oldScale;
+  const now = rollerArrowTapTarget(40, 44); // 2.5rem x 2.75rem, the coarse defaults
+  ok(
+    'coarse-pointer arrow target is no smaller than the transform it replaces',
+    now.heightPx >= oldTargetH && now.widthPx >= oldTargetW,
+    `-> ${now.widthPx.toFixed(2)}x${now.heightPx.toFixed(2)} vs ${oldTargetW.toFixed(2)}x${oldTargetH.toFixed(2)}`,
+  );
+  ok(
+    'coarse-pointer arrow target is a real target',
+    now.heightPx >= 10 && now.widthPx >= 24,
+    `-> ${now.widthPx.toFixed(2)}x${now.heightPx.toFixed(2)}`,
+  );
+}
+
+/* The arrows are about a quarter of the roller, whatever its size — the
+   property a consumer needs in order to choose `--sc-roller-height` for a
+   given tap target. */
+{
+  let ratioAssertions = 0;
+  let worst = Infinity;
+  for (let px = 16; px <= 64; px += 1) {
+    ratioAssertions += 1;
+    const t = rollerArrowTapTarget(px, px);
+    worst = Math.min(worst, t.heightPx / px);
+  }
+  ok(
+    `arrow target scales with the box across ${ratioAssertions} sizes`,
+    ratioAssertions > 0 && worst > 0.2,
+    `-> worst ratio ${worst.toFixed(4)}`,
+  );
+}
+
+/* --- the stylesheet says what this section assumes --- *
+ *
+ * The arithmetic above is only true if the CSS actually fits the svg to the box
+ * and actually contains it. Read it, rather than trusting that it still does:
+ * the escape was IN this file for the whole of the component's life.
+ */
+{
+  const css = readFileSync(new URL('../src/scroll-component.css', import.meta.url), 'utf8').replace(/\r/g, '');
+  const blockOf = (selector) => {
+    const i = css.indexOf(`\n${selector} {`);
+    return i === -1 ? null : css.slice(i, css.indexOf('\n}', i));
+  };
+
+  const rollerSvg = blockOf('.sc-roller svg');
+  ok('.sc-roller svg has a rule', rollerSvg !== null);
+  ok(
+    '.sc-roller svg is fitted to its box',
+    rollerSvg !== null && /width:\s*100%/.test(rollerSvg) && /height:\s*100%/.test(rollerSvg),
+    `-> ${JSON.stringify(rollerSvg)}`,
+  );
+  ok(
+    '.sc-roller svg no longer forces overflow: visible',
+    rollerSvg !== null && !/overflow:\s*visible/.test(rollerSvg),
+  );
+  ok(
+    'no transform inflates the svg past its box',
+    !/\.sc-roller svg\s*\{[^}]*transform:/.test(css),
+  );
+
+  const roller = blockOf('.sc-roller');
+  ok(
+    '.sc-roller takes its height from --sc-roller-height',
+    roller !== null && /height:\s*var\(--sc-roller-height\)/.test(roller),
+    `-> ${JSON.stringify(roller)}`,
+  );
+
+  const root = blockOf('.sc-root');
+  for (const [token, expected] of [
+    ['--sc-roller-height', 'var(--sc-height)'],
+    ['--sc-roller-overflow', 'hidden'],
+    ['--sc-roller-arrow-scale', '1'],
+  ]) {
+    const m = root ? root.match(new RegExp(`${token}:\\s*([^;]+);`)) : null;
+    ok(
+      `.sc-root declares ${token}: ${expected}`,
+      m !== null && m[1].trim() === expected,
+      `-> ${m ? m[1].trim() : '(missing)'}`,
+    );
+  }
+
+  ok(
+    'the coarse-pointer block sizes the roller box',
+    /@media \(pointer: coarse\)[\s\S]*?--sc-roller-height:\s*var\(--sc-roller-height-coarse/.test(css),
+  );
+}
 
 /* ------------------------------------------------------------ report */
 

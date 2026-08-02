@@ -1,6 +1,16 @@
 import * as React from 'react';
 import { useRef } from 'react';
 import type { ScrubberState } from './useScrubber';
+import {
+  ROLLER_ARROW_HOT_STROKE,
+  ROLLER_BODY,
+  ROLLER_GLOW,
+  ROLLER_HIT,
+  ROLLER_VIEWBOX,
+  rollerArrowOrigin,
+  rollerArrowPath,
+  rollerArrowTransform,
+} from './rollerGeometry';
 
 /**
  * React 18 exposes `useId`; fall back to a module counter on React 17 so the
@@ -33,6 +43,13 @@ export interface RollerIconProps {
    * defaults (`--sc-line-*`, `--sc-line-up-*`, `--sc-line-down-*`).
    */
   lineColors?: [string, string, string];
+  /**
+   * Applied to the `<svg>`. The CSS build sizes it from the stylesheet; the
+   * Tailwind build passes `w-full h-full` here so both builds fit the graphic
+   * to `.sc-roller`'s box rather than painting a fixed 32px whatever the box
+   * measures. See `rollerGeometry.ts` for why that mattered.
+   */
+  className?: string;
 }
 
 /** Picks an up / down / resting value based on travel direction. */
@@ -53,6 +70,7 @@ export const RollerIcon: React.FC<RollerIconProps> = ({
   pixelsPerTick = 6,
   getArrowProps,
   lineColors,
+  className,
 }) => {
   const uid = useUniqueId();
   const gradientId = `sc-roller-gradient-${uid}`;
@@ -127,10 +145,12 @@ export const RollerIcon: React.FC<RollerIconProps> = ({
       ? v('--sc-arrow-up-active-stroke', '#14532d')
       : v('--sc-arrow-down-active-stroke', '#7c2d12');
 
+    const origin = rollerArrowOrigin(direction);
+
     return (
       <path
-        d={isUp ? 'M12 0L6 5H18L12 0Z' : 'M12 32L6 27H18L12 32Z'}
-        strokeWidth={hot ? 1.5 : 0}
+        d={rollerArrowPath(direction)}
+        strokeWidth={hot ? ROLLER_ARROW_HOT_STROKE : 0}
         strokeLinejoin="round"
         style={{
           fill: hot ? hotFill : rollerColor,
@@ -140,8 +160,8 @@ export const RollerIcon: React.FC<RollerIconProps> = ({
             : isDragging
               ? v('--sc-arrow-opacity-dim', '0.3')
               : v('--sc-arrow-opacity', '0.6'),
-          transform: hot ? `scale(1.15) translateY(${isUp ? '-1.5px' : '1.5px'})` : 'scale(1)',
-          transformOrigin: isUp ? '12px 2.5px' : '12px 29.5px',
+          transform: rollerArrowTransform(direction, hot),
+          transformOrigin: `${origin.x}px ${origin.y}px`,
           transition: `all ${v('--sc-arrow-transition', '0.15s')} ease-out`,
           pointerEvents: 'none',
         }}
@@ -151,17 +171,35 @@ export const RollerIcon: React.FC<RollerIconProps> = ({
 
   return (
     <svg
-      width="24"
-      height="32"
-      viewBox="0 0 24 32"
+      width={ROLLER_VIEWBOX.width}
+      height={ROLLER_VIEWBOX.height}
+      viewBox={`${ROLLER_VIEWBOX.x} ${ROLLER_VIEWBOX.y} ${ROLLER_VIEWBOX.width} ${ROLLER_VIEWBOX.height}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ overflow: 'visible' }}
+      className={className}
+      /*
+       * `hidden` by DEFAULT, and that is a promise, not a style: the roller
+       * stays inside the box the layout gave it. It was `visible`, and two
+       * fields in adjacent rows had their arrows land on each other.
+       *
+       * Nothing is clipped at the default, because nothing is drawn outside the
+       * viewBox any more — see `rollerGeometry.ts`. The token is here for a
+       * consumer who deliberately wants bleed (a decorative oversized arrow via
+       * `--sc-roller-arrow-scale`, say); it is opt-IN now rather than forced.
+       */
+      style={{ overflow: v('--sc-roller-overflow', 'hidden') }}
       aria-hidden="true"
       focusable="false"
     >
       <defs>
-        <linearGradient id={gradientId} x1="3" y1="8" x2="21" y2="24" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id={gradientId}
+          x1={ROLLER_BODY.x}
+          y1={ROLLER_BODY.y}
+          x2={ROLLER_BODY.x + ROLLER_BODY.width}
+          y2={ROLLER_BODY.y + ROLLER_BODY.height}
+          gradientUnits="userSpaceOnUse"
+        >
           <stop style={{ stopColor: gradFrom }} />
           <stop offset="1" style={{ stopColor: gradTo }} />
         </linearGradient>
@@ -171,13 +209,19 @@ export const RollerIcon: React.FC<RollerIconProps> = ({
           cy="0"
           r="1"
           gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(12 16) rotate(90) scale(14)"
+          gradientTransform={`translate(${ROLLER_GLOW.cx} ${ROLLER_GLOW.cy}) rotate(90) scale(${ROLLER_GLOW.falloff})`}
         >
           <stop style={{ stopColor: glow }} />
           <stop offset="1" style={{ stopColor: glow, stopOpacity: 0 }} />
         </radialGradient>
         <clipPath id={clipId}>
-          <rect x="3" y="8" width="18" height="16" rx="6" />
+          <rect
+            x={ROLLER_BODY.x}
+            y={ROLLER_BODY.y}
+            width={ROLLER_BODY.width}
+            height={ROLLER_BODY.height}
+            rx={ROLLER_BODY.rx}
+          />
         </clipPath>
       </defs>
 
@@ -188,18 +232,18 @@ export const RollerIcon: React.FC<RollerIconProps> = ({
 
           {/* Invisible hit areas — deliberately larger than the arrows for touch. */}
           <rect
-            x="0"
-            y="0"
-            width="24"
-            height="9"
+            x={ROLLER_VIEWBOX.x}
+            y={ROLLER_VIEWBOX.y}
+            width={ROLLER_VIEWBOX.width}
+            height={ROLLER_HIT.height}
             style={{ fill: 'transparent', cursor: 'pointer', touchAction: 'none' }}
             {...getArrowProps('up')}
           />
           <rect
-            x="0"
-            y="23"
-            width="24"
-            height="9"
+            x={ROLLER_VIEWBOX.x}
+            y={ROLLER_VIEWBOX.y + ROLLER_VIEWBOX.height - ROLLER_HIT.height}
+            width={ROLLER_VIEWBOX.width}
+            height={ROLLER_HIT.height}
             style={{ fill: 'transparent', cursor: 'pointer', touchAction: 'none' }}
             {...getArrowProps('down')}
           />
@@ -208,11 +252,11 @@ export const RollerIcon: React.FC<RollerIconProps> = ({
 
       {/* Roller body */}
       <rect
-        x="3"
-        y="8"
-        width="18"
-        height="16"
-        rx="6"
+        x={ROLLER_BODY.x}
+        y={ROLLER_BODY.y}
+        width={ROLLER_BODY.width}
+        height={ROLLER_BODY.height}
+        rx={ROLLER_BODY.rx}
         strokeWidth={v('--sc-roller-border-width', '2')}
         style={{ fill: rollerFace, stroke: `url(#${gradientId})` }}
       />
@@ -261,9 +305,9 @@ export const RollerIcon: React.FC<RollerIconProps> = ({
 
       {isDragging && (
         <circle
-          cx="12"
-          cy="16"
-          r="14"
+          cx={ROLLER_GLOW.cx}
+          cy={ROLLER_GLOW.cy}
+          r={ROLLER_GLOW.r}
           style={{ fill: `url(#${glowId})`, opacity: v('--sc-roller-glow-opacity', '0.4') }}
         />
       )}

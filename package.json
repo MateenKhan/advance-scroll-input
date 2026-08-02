@@ -1,6 +1,6 @@
 {
   "name": "@jugaaadi/advance-scroll-input",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A touch-friendly number input with a vertical roller scrubber and unit-aware parsing (10ft, 100in, 123mm, 123\", 5' 6\").",
   "keywords": [
     "react",

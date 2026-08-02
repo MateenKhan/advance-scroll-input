@@ -24,6 +24,30 @@ export type { DimensionInputProps } from './createDimensionInput';
 export { RollerIcon } from './RollerIcon';
 export type { RollerIconProps } from './RollerIcon';
 
+/**
+ * The roller's geometry, exported so a consumer (or a headless test) can ask
+ * how much room the graphic takes before laying anything out next to it.
+ */
+export {
+  ROLLER_VIEWBOX,
+  ROLLER_BODY,
+  ROLLER_BODY_STROKE,
+  ROLLER_ARROW,
+  ROLLER_ARROW_POP,
+  ROLLER_ARROW_LIFT,
+  ROLLER_ARROW_HOT_STROKE,
+  ROLLER_HIT,
+  ROLLER_GLOW,
+  rollerArrowPath,
+  rollerArrowOrigin,
+  rollerArrowTransform,
+  rollerArrowExtent,
+  rollerPaintedExtent,
+  rollerFit,
+  rollerArrowTapTarget,
+} from './rollerGeometry';
+export type { RollerBox } from './rollerGeometry';
+
 /** Headless engine, for building your own visual shell. */
 export { useScrubber, formatDisplay } from './useScrubber';
 export type { UseScrubberOptions, ScrubberState } from './useScrubber';

@@ -23,6 +23,37 @@
   --sc-roller-width: 1.75rem;
   --sc-width: 100%;
 
+  /*
+   * THE ROLLER'S OWN HEIGHT, SEPARATE FROM THE INPUT'S.
+   *
+   * It used to be `--sc-height` and nothing else, so "make the roller shorter"
+   * and "make the input taller" were the same knob — and neither of them
+   * actually resized the GRAPHIC, which was a fixed 32px `<svg>` whatever the
+   * box measured. A consumer at `--sc-height: 1.35rem` got a 32px drawing in a
+   * 21.6px box, and two fields in adjacent rows had their arrows collide.
+   *
+   * Now: this sizes the box, `.sc-roller svg` fills the box, and the drawing is
+   * fitted inside it. Defaulting to `var(--sc-height)` keeps every existing
+   * consumer exactly where it was — at the 2rem default the graphic renders at
+   * the same 24 x 32 px it always has.
+   */
+  --sc-roller-height: var(--sc-height);
+
+  /*
+   * May the roller paint outside its own box? `hidden` — and that is the
+   * promise a consumer lays out against. Nothing is clipped at the defaults:
+   * the drawing is self-contained (see `rollerGeometry.ts`). Set `visible` only
+   * if you have deliberately asked for bleed.
+   */
+  --sc-roller-overflow: hidden;
+
+  /*
+   * The step arrows' size, relative to the roller. 1 is the drawn size, which
+   * is the largest that stays inside the box; above 1 they are clipped unless
+   * you also set `--sc-roller-overflow: visible`.
+   */
+  --sc-roller-arrow-scale: 1;
+
   /* ============================= TYPE ============================= */
   --sc-font-size: 0.875rem;
   --sc-font-family: inherit;
@@ -439,7 +470,7 @@
   align-items: center;
   justify-content: center;
   width: var(--sc-roller-width);
-  height: var(--sc-height);
+  height: var(--sc-roller-height);
   cursor: var(--sc-cursor-scrub);
   opacity: var(--sc-roller-opacity);
   transition:
@@ -466,9 +497,24 @@
   transform: scale(var(--sc-roller-scale-dragging));
 }
 
+/*
+ * THE GRAPHIC IS FITTED TO THE BOX — it does not have a size of its own.
+ *
+ * `width`/`height` at 100% with the default `preserveAspectRatio` mean the
+ * viewBox is scaled to fit and centred, so BOTH `--sc-roller-width` and
+ * `--sc-roller-height` bound it. That is what makes the roller safe to lay out
+ * next to something: 32 view units are exactly the box, never more.
+ *
+ * Before this, `<svg width="24" height="32">` painted 32 CSS px regardless of
+ * its container and `overflow: visible` let it out. `overflow` now reads
+ * `--sc-roller-overflow` (default `hidden`), and it is set inline on the
+ * element so the Tailwind build — which never loads this file — gets the same
+ * promise.
+ */
 .sc-roller svg {
-  overflow: visible;
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* ------------------------------------------------- touch & responsiveness */
@@ -478,13 +524,18 @@
 @media (pointer: coarse) {
   .sc-root {
     --sc-height: var(--sc-height-coarse, 2.75rem);
+    /*
+     * The BOX grows for a finger, not the drawing inside a box that stayed the
+     * same size. `--sc-roller-scale-coarse: 1.15` used to scale the `<svg>`
+     * itself, which bought the tap target by pushing the graphic 3px outside
+     * its own bounds on all four sides — the very defect this file now
+     * forbids. A 2.75rem box gives a 44 x 44 roller and a 44 x 12.4 px arrow
+     * target, both larger than the 1.15x transform ever produced.
+     */
+    --sc-roller-height: var(--sc-roller-height-coarse, var(--sc-height));
     --sc-roller-width: var(--sc-roller-width-coarse, 2.5rem);
     --sc-font-size: var(--sc-font-size-coarse, 1rem); /* >=16px stops iOS zoom */
     --sc-gap: var(--sc-gap-coarse, 0.5rem);
-  }
-
-  .sc-roller svg {
-    transform: scale(var(--sc-roller-scale-coarse, 1.15));
   }
 }
 

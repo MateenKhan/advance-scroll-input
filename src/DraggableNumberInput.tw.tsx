@@ -188,11 +188,16 @@ export const DraggableNumberInputTw = forwardRef<ScrollComponentHandle, Draggabl
             } ${rollerClassName || ''}`}
             {...getRollerProps()}
           >
+            {/* `w-full h-full`: the graphic is fitted to the roller's box in
+                this build too, so it can never paint outside it. The CSS build
+                does the same from `scroll-component.css`, which this one never
+                loads. */}
             <RollerIcon
               state={state}
               showArrows={showArrows}
               pixelsPerTick={pixelsPerTick}
               getArrowProps={getArrowProps}
+              className="w-full h-full"
             />
           </div>
         )}

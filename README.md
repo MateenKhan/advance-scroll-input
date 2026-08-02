@@ -234,12 +234,40 @@ Or per instance:
 
 | Token | Default | Controls |
 | --- | --- | --- |
-| `--sc-height` | `2rem` | Control height |
+| `--sc-height` | `2rem` | Input height |
 | `--sc-radius` | `4px` | Field corner radius |
 | `--sc-gap` | `0.375rem` | Gap between field and roller |
 | `--sc-padding-x` | `0.5rem` | Field horizontal padding |
 | `--sc-roller-width` | `1.75rem` | Roller column width |
+| `--sc-roller-height` | `var(--sc-height)` | **Roller height, independently of the input** |
+| `--sc-roller-arrow-scale` | `1` | Step-arrow size, relative to the roller |
+| `--sc-roller-overflow` | `hidden` | Whether the roller may paint outside its box |
 | `--sc-width` | `100%` | Root width |
+
+#### Sizing the roller
+
+The roller graphic is **fitted to its box** — `--sc-roller-width` and
+`--sc-roller-height` bound it in both directions, and it never paints outside
+them. So the two halves of "make the roller smaller" and "make the input
+bigger" are separate knobs:
+
+```css
+/* a shorter roller beside an unchanged input */
+.dense .sc-root { --sc-roller-height: 1.25rem; }
+
+/* or a taller input beside an unchanged roller */
+.roomy .sc-root { --sc-height: 3rem; --sc-roller-height: 2rem; }
+```
+
+The step arrows are the top and bottom **9 of the 32** view units, so one
+arrow's tap target is `0.28 × h` tall and `0.75 × h` wide, where `h` is the
+roller's *fitted* size — `min(--sc-roller-height, --sc-roller-width ÷ 0.75)`.
+Choose the height for the target you want: `2rem` gives 24 × 9 px, the
+`2.75rem` coarse-pointer default gives 33 × 12.4 px.
+
+`--sc-roller-arrow-scale` above `1` is clipped at the box unless you also set
+`--sc-roller-overflow: visible`. That is deliberate — a component that paints
+outside its bounds cannot be laid out next to anything.
 
 ### Typography
 
@@ -341,7 +369,13 @@ The active **up** arrow is green and the active **down** arrow orange. Both hues
 
 ### Touch overrides
 
-The coarse-pointer and narrow-container breakpoints are themeable too: `--sc-height-coarse`, `--sc-roller-width-coarse`, `--sc-font-size-coarse`, `--sc-gap-coarse`, `--sc-roller-scale-coarse`, `--sc-gap-narrow`, `--sc-roller-width-narrow`.
+The coarse-pointer and narrow-container breakpoints are themeable too: `--sc-height-coarse`, `--sc-roller-height-coarse`, `--sc-roller-width-coarse`, `--sc-font-size-coarse`, `--sc-gap-coarse`, `--sc-gap-narrow`, `--sc-roller-width-narrow`.
+
+> `--sc-roller-scale-coarse` is **gone**. It scaled the `<svg>` itself by 1.15,
+> which grew the tap target by pushing the graphic ~3px outside its own box on
+> every side. The coarse block grows `--sc-roller-height` instead, which
+> produces a *larger* target (33 × 12.4 px against the old 27.6 × 10.4 px) and
+> stays inside the layout.
 
 A light preset ships as a modifier: `<DimensionInput className="sc-root--light" />`.
 

@@ -51,9 +51,26 @@ Set tokens on `:root`, on a wrapper, or per instance:
 | `--sc-gap` | `0.375rem` |
 | `--sc-padding-x` | `0.5rem` |
 | `--sc-roller-width` | `1.75rem` |
+| `--sc-roller-height` | `var(--sc-height)` |
+| `--sc-roller-arrow-scale` | `1` |
+| `--sc-roller-overflow` | `hidden` |
 | `--sc-font-size` | `0.875rem` |
 | `--sc-font-family` | `inherit` |
 | `--sc-font-weight` / `-dragging` | `400` / `700` |
+
+### Sizing the roller
+
+The roller graphic is **fitted to its box** — `--sc-roller-width` and `--sc-roller-height` bound it in both directions and it never paints outside them, so it cannot collide with whatever you put in the next row.
+
+```css
+/* a shorter roller beside an unchanged input */
+.dense .sc-root { --sc-roller-height: 1.25rem; }
+
+/* or a taller input beside an unchanged roller */
+.roomy .sc-root { --sc-height: 3rem; --sc-roller-height: 2rem; }
+```
+
+The step arrows are the top and bottom 9 of the 32 view units, so one arrow's tap target is `0.28 x h` tall and `0.75 x h` wide, where `h` is the fitted size `min(--sc-roller-height, --sc-roller-width / 0.75)`. `2rem` gives 24 x 9 px; the `2.75rem` coarse-pointer default gives 33 x 12.4 px.
 
 ## Surface, border, text
 
@@ -113,7 +130,11 @@ Each has idle / hover / focus / dragging / disabled variants, so any state can b
 
 ## Touch breakpoints
 
-The coarse-pointer and narrow-container overrides are themeable too: `--sc-height-coarse`, `--sc-roller-width-coarse`, `--sc-font-size-coarse`, `--sc-gap-coarse`, `--sc-roller-scale-coarse`, `--sc-gap-narrow`, `--sc-roller-width-narrow`.
+The coarse-pointer and narrow-container overrides are themeable too: `--sc-height-coarse`, `--sc-roller-height-coarse`, `--sc-roller-width-coarse`, `--sc-font-size-coarse`, `--sc-gap-coarse`, `--sc-gap-narrow`, `--sc-roller-width-narrow`.
+
+:::caution `--sc-roller-scale-coarse` was removed
+It scaled the roller `<svg>` by 1.15 to enlarge the tap target, which pushed the graphic about 3px outside its own box on every side. The coarse block grows `--sc-roller-height` instead: a bigger target (33 x 12.4 px against 27.6 x 10.4 px) that stays inside the layout.
+:::
 
 :::note SVG colours
 Tokens reach the roller SVG through `style`, not presentation attributes — `fill="var(--x)"` is not resolved by browsers, so the component never uses that form. Worth knowing if you fork it.
