@@ -68,12 +68,35 @@ const UNIT_FROM_TOKEN: Record<string, Unit> = {
   px: Unit.PX,
 };
 
+const FOOT_MARKS = "'’‘′";
+const INCH_MARKS = '"”“″';
+const FOOT_MARK_PATTERN = new RegExp(`[${FOOT_MARKS}]`, 'g');
+const INCH_MARK_PATTERN = new RegExp(`[${INCH_MARKS}]`, 'g');
+
+export const unitOfMark = (mark: string): Unit | null => {
+  if (mark.length !== 1) return null;
+  if (FOOT_MARKS.includes(mark)) return Unit.FEET;
+  if (INCH_MARKS.includes(mark)) return Unit.INCH;
+  return null;
+};
+
+export const straightenMarks = (input: string): string =>
+  input.replace(FOOT_MARK_PATTERN, "'").replace(INCH_MARK_PATTERN, '"');
+
+const NUMBER_SOURCE = String.raw`(?:\d+\s+\d+\/\d+|\d+\/\d+|\d*\.?\d+)`;
+const UNIT_SOURCE = String.raw`(?:millimeters?|centimeters?|decimeters?|meters?|inch(?:es)?|feet|foot|pixels?|mm|cm|dm|ft|in|px|m|"|')`;
+const MEASURE_SOURCE = `${NUMBER_SOURCE}\\s*${UNIT_SOURCE}`;
+const READABLE_LENGTH = new RegExp(
+  `^\\s*[-+]?(?:${NUMBER_SOURCE}\\s*${UNIT_SOURCE}?|${MEASURE_SOURCE}(?:\\s*${MEASURE_SOURCE})+)\\s*$`,
+  'i',
+);
+
 /**
  * Normalizes a raw string into a lowercase, symbol-free form the parser can
  * walk: `5' 6"` becomes `5ft 6in`, `1 1/2 in` becomes `1.5 in`.
  */
 const normalize = (input: string): string => {
-  let s = input.trim().toLowerCase().replace(',', '.');
+  let s = straightenMarks(input).trim().toLowerCase().replace(',', '.');
 
   // Feet/inch marks become word tokens so one regex handles every notation.
   s = s.replace(/'/g, 'ft ').replace(/"/g, 'in ');
@@ -99,7 +122,8 @@ const normalize = (input: string): string => {
  * `3/4"`). A bare number is interpreted as `defaultUnit`.
  */
 export const parseDimensionToMm = (input: string, defaultUnit: Unit = Unit.MM): number => {
-  if (!input || typeof input !== 'string') return 0;
+  if (!input || typeof input !== 'string' || !input.trim()) return 0;
+  if (!isParsableDimension(input)) return NaN;
 
   const clean = normalize(input);
   const partRegex = /([-+\d./]+)\s*(mm|cm|dm|m|in|ft|px)?/g;
@@ -143,11 +167,11 @@ export const parseUnitFromString = (input: string): Unit | null => {
   return match ? UNIT_FROM_TOKEN[match[1]] ?? null : null;
 };
 
-/** True when the string parses to a real dimension rather than junk. */
-export const isParsableDimension = (input: string): boolean => {
-  if (!input || !input.trim()) return false;
-  return /[\d]/.test(normalize(input));
-};
+/** True when the whole string is a length, so nothing in it is guessed. */
+export function isParsableDimension(input: string): boolean {
+  if (!input || typeof input !== 'string' || !input.trim()) return false;
+  return READABLE_LENGTH.test(straightenMarks(input));
+}
 
 /**
  * Formats millimetres for display in `unit`, trimming floating-point noise

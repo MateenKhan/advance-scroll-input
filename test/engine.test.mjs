@@ -7,6 +7,8 @@ import {
   evaluateExpression,
   isFormula,
   isPlainDimension,
+  isParsableDimension,
+  parseDimensionToMm,
   Unit,
   tokenize,
   matchingParens,
@@ -180,6 +182,58 @@ for (const s of ["5' 6\"", '5ft 6in', '1 1/2 in']) {
 // `5' 6"` still sums when it does reach the engine.
 evalsTo(`5' 6"`, 1676.4, { displayUnit: Unit.MM });
 evalsTo('5ft 6in', 1676.4, { displayUnit: Unit.MM });
+
+/* ------------------------------------- phone keyboards' curly marks */
+
+const SEVEN_SIX_MM = 2286;
+const CURLY_SEVEN_SIX = ['7’6”', '7’ 6”', '7′6″', '7′ 6″', '7‘6“', '7’6"', "7'6”"];
+for (const s of CURLY_SEVEN_SIX) {
+  ok(`curly marks are readable ${JSON.stringify(s)}`, isParsableDimension(s), '-> rejected');
+  ok(
+    `curly marks read as feet and inches ${JSON.stringify(s)}`,
+    approx(parseDimensionToMm(s, Unit.MM), SEVEN_SIX_MM),
+    `-> ${parseDimensionToMm(s, Unit.MM)}`,
+  );
+  evalsTo(s, SEVEN_SIX_MM, { displayUnit: Unit.MM });
+  ok(
+    `curly marks tokenize verbatim ${JSON.stringify(s)}`,
+    tokenize(s).map((t) => t.value).join('') === s && !tokenize(s).some((t) => t.type === 'error'),
+  );
+}
+ok('curly compound with a space is plain', isPlainDimension('7’ 6”'), '-> became a formula');
+evalsTo('2’*3', 1828.8, { displayUnit: Unit.MM });
+evalsTo('(1+2)″', 76.2, { displayUnit: Unit.MM });
+
+/* ----------------------------- an unreadable length is never guessed */
+
+for (const s of ['7x6', '7ft abc', 'abc 5', '12 34', '5ft 6', '6 5ft', '1.2.3', '7 ft ft', 'ft', '"']) {
+  ok(`unreadable is rejected ${JSON.stringify(s)}`, !isParsableDimension(s), '-> accepted');
+  ok(`unreadable is not plain ${JSON.stringify(s)}`, !isPlainDimension(s), '-> classified as plain');
+  ok(
+    `unreadable parses to NaN ${JSON.stringify(s)}`,
+    Number.isNaN(parseDimensionToMm(s, Unit.MM)),
+    `-> ${parseDimensionToMm(s, Unit.MM)}`,
+  );
+}
+const READABLE_MM = [
+  ['123', 123],
+  ['10ft', 3048],
+  ['123"', 3124.2],
+  ["5' 6\"", 1676.4],
+  ["7'6\"", SEVEN_SIX_MM],
+  ['5ft6in', 1676.4],
+  ['1 1/2 in', 38.1],
+  ['3/4"', 19.05],
+  ['45 cm', 450],
+  ['2 feet', 609.6],
+  ['1m 500mm', 1500],
+  ['-5mm', -5],
+];
+for (const [s, mm] of READABLE_MM) {
+  ok(`readable ${JSON.stringify(s)}`, isParsableDimension(s), '-> rejected');
+  ok(`reads ${JSON.stringify(s)}`, approx(parseDimensionToMm(s, Unit.MM), mm), `-> ${parseDimensionToMm(s, Unit.MM)}`);
+}
+ok('empty still reads as 0', parseDimensionToMm('', Unit.MM) === 0);
 
 /* ------------------------------------------------------ error cases */
 

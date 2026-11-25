@@ -1,4 +1,4 @@
-import { Unit } from '../units';
+import { Unit, unitOfMark } from '../units';
 
 /**
  * Token categories. These drive both parsing and syntax highlighting, so the
@@ -226,7 +226,8 @@ export function tokenize(src: string): Token[] {
     // ---- bare unit marks -------------------------------------------------
     // `'` and `"` are units only directly after a value or a closing paren;
     // the number branch above already consumed the common case.
-    if (c === '"' || c === "'") {
+    const markUnit = unitOfMark(c);
+    if (markUnit) {
       const p = prev();
       if (p && (p.type === 'number' || p.type === 'rparen' || p.type === 'ident')) {
         push({
@@ -234,7 +235,7 @@ export function tokenize(src: string): Token[] {
           value: c,
           start: i,
           end: i + 1,
-          unit: c === '"' ? Unit.INCH : Unit.FEET,
+          unit: markUnit,
         });
         i++;
         continue;

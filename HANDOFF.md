@@ -64,6 +64,10 @@ Setting `resize: horizontal` inside a flex row does nothing: the browser writes 
 
 **Compound parts join on whitespace only** (`5' 6"`, `1 1/2 in`). A sign between parts is arithmetic. Allowing `[-+]` on trailing parts made `158-9` classify as two dimensions and collapse to `158` via `parseFloat("158-9")` — a shipped bug caught by the user. Regression tests guard this; don't loosen that regex.
 
+**Every part of a compound carries a unit, and the whole text must be read.** `12 34` and `5ft 6` used to sum (46 mm, 5 ft + 6 mm); `7x6` read as 13 mm. Now `isParsableDimension` is the one grammar (`isPlainDimension` delegates to it) and `parseDimensionToMm` returns `NaN` for anything it cannot read fully, `0` only for empty text.
+
+**Phone keyboards type curly marks.** iOS and most Android keyboards turn `7'6"` into `7’6”`; that once read as 13 mm. `’ ‘ ′` are feet and `” “ ″` are inches everywhere: the dimension parser, the classifier and the expression tokenizer (`unitOfMark` in `units.ts`).
+
 ### Rejected entries must survive blur
 
 A `useEffect` resyncs `localText` from `value` when focus is lost. It **must** bail when `formulaRef.current.e !== null`, or a rejected entry like `100 *asdf` is silently replaced by the old number and the user loses what they typed.

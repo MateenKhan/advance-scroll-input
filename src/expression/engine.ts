@@ -1,4 +1,4 @@
-import { Unit, fromMm, toMm } from '../units';
+import { Unit, fromMm, isParsableDimension, toMm } from '../units';
 import { meaningful, tokenize, type Token } from './tokenize';
 
 /* ------------------------------------------------------------------ types */
@@ -326,26 +326,8 @@ function evalNode(n: Node, ctx: EvalContext): number {
 
 /* -------------------------------------------------------------- public API */
 
-/**
- * Matches text that is purely a dimension in the historical shorthand —
- * `123`, `10ft`, `5' 6"`, `1 1/2 in`, `3/4"` — with no expression operators.
- * Those keep their original meaning (`3/4"` is three-quarters of an inch, not
- * a division by four inches).
- */
-const NUM = String.raw`(?:\d+\s+\d+\/\d+|\d+\/\d+|\d*\.?\d+)`;
-const UNIT = String.raw`(?:millimeters?|centimeters?|decimeters?|meters?|inch(?:es)?|feet|foot|pixels?|mm|cm|dm|ft|in|px|m|"|')`;
-const PART = `${NUM}\\s*${UNIT}?`;
-
-/**
- * Compound parts join on **whitespace only** (`5' 6"`, `5ft 6in`). A sign
- * between parts is arithmetic, never a second measurement — otherwise
- * `158-9` would be read as two dimensions and collapse to 158.
- */
-const PLAIN_DIMENSION = new RegExp(`^\\s*[-+]?${PART}(?:\\s+${PART})*\\s*$`, 'i');
-
 /** True when the text should go through the dimension parser, not the engine. */
-export const isPlainDimension = (src: string): boolean =>
-  src.trim() !== '' && PLAIN_DIMENSION.test(src);
+export const isPlainDimension = (src: string): boolean => isParsableDimension(src);
 
 /** True when the text contains anything only the expression engine can handle. */
 export const isFormula = (src: string): boolean => src.trim() !== '' && !isPlainDimension(src);
